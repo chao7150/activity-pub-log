@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    environment:
+      MYSQL_USER: mastodonlog
+      MYSQL_PASSWORD: wohoho
+      MYSQL_DATABASE: mastodonlog
+      MYSQL_HOST: db
+    ports:
+      - "3000:1323"
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    image: mysql:8.0.27
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: mastodonlog
+      MYSQL_USER: mastodonlog
+      MYSQL_PASSWORD: wohoho
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]

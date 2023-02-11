@@ -1,0 +1,22 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "docker compose up",
+        "type": "shell",
+        "command": "sudo docker compose -f docker/docker-compose.local.yml up --build"
+      },
+      {
+        "label": "docker start dev db",
+        "type": "shell",
+        "command": "sudo docker compose -f docker/docker-compose.local.yml -p dev up -d db"
+      },
+      {
+        "label": "docker start test db",
+        "type": "shell",
+        "command": "sudo docker compose -f docker/docker-compose.local.yml -p test up -d db"
+      }
+    ]
+  }
