@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/labstack/echo/v4"
@@ -20,6 +21,14 @@ type App struct {
 	Host         string `json:"host"`
 	ClientId     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
+}
+
+type PostOauthTokenResponse struct {
+	AccessToken  string `json:"access_token"`
+	TokenType    string `json:"token_type"`
+	Scope        string `json:"scope"`
+	CreatedAt    int64  `json:"created_at"`
+	RefreshToken string `json:"refresh_token"`
 }
 
 func getAppByHost(host string) (App, error) {
@@ -69,11 +78,11 @@ func main() {
 
 	e := echo.New()
 	e.GET("/", func(c echo.Context) error {
-		cookie, err := c.Cookie("user_session")
+		cookie, err := c.Cookie("token")
 		if err != nil {
 			return c.Redirect(302, "/login")
 		}
-		return c.String(http.StatusOK, fmt.Sprintf("name: %v\nvalue: %v", cookie.Name, cookie.Value))
+		return c.String(http.StatusOK, cookie.Value)
 	})
 	e.File("/login", "static/login.html")
 	e.POST("/sign_in", func(c echo.Context) error {
@@ -83,7 +92,7 @@ func main() {
 			fmt.Printf("app data was not found in db. fetch it.")
 			path := "https://" + host + "/api/v1/apps"
 			// TODO: redirect_uris
-			resp, err := http.PostForm(path, url.Values{"client_name": {"chao-mastodon-log"}, "redirect_uris": {"example.com"}})
+			resp, err := http.PostForm(path, url.Values{"client_name": {"chao-mastodon-log"}, "redirect_uris": {"http://localhost:1323/authorize", "http://localhost:1323/"}})
 			if err != nil {
 				return c.String(http.StatusBadRequest, fmt.Sprintf("failed to create app for the host: %v", err))
 			}
@@ -101,7 +110,59 @@ func main() {
 				return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to insert app to db: %v", err))
 			}
 		}
-		return c.String(http.StatusOK, app.ClientSecret)
+		u := url.URL{}
+		u.Scheme = "https"
+		u.Host = host
+		u.Path = "/oauth/authorize"
+		q := url.Values{"response_type": {"code"}, "client_id": {app.ClientId}, "redirect_uri": {"http://localhost:1323/authorize"}}
+		u.RawQuery = q.Encode()
+		cookie := new(http.Cookie)
+		cookie.Name = "authentication-ongoing-instance-name"
+		cookie.Value = host
+		cookie.Expires = time.Now().Add(5 * time.Minute)
+		cookie.Path = "/authorize"
+		c.SetCookie(cookie)
+		return c.Redirect(302, u.String())
+	})
+	e.GET("/authorize", func(c echo.Context) error {
+		cookie, err := c.Cookie("authentication-ongoing-instance-name")
+		if err != nil {
+			return c.Redirect(302, "/")
+		}
+		host := cookie.Value
+		code := c.QueryParam("code")
+		u := url.URL{}
+		u.Scheme = "https"
+		u.Host = host
+		u.Path = "/oauth/token"
+		app, err := getAppByHost(host)
+		if err != nil {
+			return c.String(http.StatusInternalServerError, fmt.Sprintf("cannot obtain app: %v", err))
+		}
+		q := url.Values{"grant_type": {"authorization_code"}, "code": {code}, "client_id": {app.ClientId}, "client_secret": {app.ClientSecret}, "redirect_uri": {"http://localhost:1323/authorize"}}
+		fmt.Println(q)
+		resp, err := http.PostForm(u.String(), q)
+		if err != nil {
+			return c.String(http.StatusBadRequest, fmt.Sprintf("failed to create app for the host: %v", err))
+		}
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		fmt.Printf("body %s", body)
+		if err != nil {
+			return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to read response from server: %v", err))
+		}
+		var r PostOauthTokenResponse
+		if err := json.Unmarshal(body, &r); err != nil {
+			return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to parse response from server: %v", err))
+		}
+		fmt.Printf("token %v", r)
+		cookie = new(http.Cookie)
+		cookie.Name = "token"
+		cookie.Value = r.AccessToken
+		cookie.Expires = time.Now().Add(24 * 7 * time.Hour)
+		cookie.Path = "/"
+		c.SetCookie(cookie)
+		return c.Redirect(302, "/")
 	})
 
 	e.Logger.Fatal(e.Start(":1323"))
