@@ -1,4 +1,4 @@
-package main
+package activitypublog
 
 import (
 	"database/sql"
@@ -17,12 +17,6 @@ import (
 
 var db *sql.DB
 
-type App struct {
-	Host         string `json:"host"`
-	ClientId     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
-}
-
 type PostOauthTokenResponse struct {
 	AccessToken  string `json:"access_token"`
 	TokenType    string `json:"token_type"`
@@ -31,28 +25,7 @@ type PostOauthTokenResponse struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
-func getAppByHost(host string) (App, error) {
-	var app App
-
-	row := db.QueryRow("SELECT * FROM app where host = ?", host)
-	if err := row.Scan(&app.Host, &app.ClientId, &app.ClientSecret); err != nil {
-		if err == sql.ErrNoRows {
-			return app, fmt.Errorf("getAppByHost %s: no such app", host)
-		}
-		return app, fmt.Errorf("getAppByHost %s: %v", host, err)
-	}
-	return app, nil
-}
-
-func createApp(app App) error {
-	_, err := db.Exec("INSERT INTO app (host, client_id, client_secret) VALUES (?, ?, ?)", app.Host, app.ClientId, app.ClientSecret)
-	if err != nil {
-		return fmt.Errorf("createApp: %v", err)
-	}
-	return nil
-}
-
-func main() {
+func StartServer() {
 	cfg := mysql.Config{
 		User:   os.Getenv("MYSQL_USER"),
 		Passwd: os.Getenv("MYSQL_PASSWORD"),
@@ -105,25 +78,14 @@ func main() {
 	e.File("/login", "static/login.html")
 	e.POST("/sign_in", func(c echo.Context) error {
 		host := c.FormValue("host")
-		app, err := getAppByHost(host)
+		app, err := dSelectAppByHost(host)
 		if err != nil {
 			fmt.Printf("app data was not found in db. fetch it.")
-			path := "https://" + host + "/api/v1/apps"
-			// TODO: redirect_uris
-			resp, err := http.PostForm(path, url.Values{"client_name": {"chao-mastodon-log"}, "redirect_uris": {"http://localhost:1323/authorize", "http://localhost:1323/"}})
+			app, err = hPostApp(host)
 			if err != nil {
-				return c.String(http.StatusBadRequest, fmt.Sprintf("failed to create app for the host: %v", err))
+				return c.String(http.StatusInternalServerError, fmt.Sprintf("post app failed: %v", err))
 			}
-			defer resp.Body.Close()
-			body, err := io.ReadAll(resp.Body)
-			if err != nil {
-				return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to read response from server: %v", err))
-			}
-			if err := json.Unmarshal(body, &app); err != nil {
-				return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to parse response from server: %v", err))
-			}
-			app.Host = host
-			err = createApp(app)
+			err = dInsertApp(app)
 			if err != nil {
 				return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to insert app to db: %v", err))
 			}
@@ -153,7 +115,7 @@ func main() {
 		u.Scheme = "https"
 		u.Host = host
 		u.Path = "/oauth/token"
-		app, err := getAppByHost(host)
+		app, err := dSelectAppByHost(host)
 		if err != nil {
 			return c.String(http.StatusInternalServerError, fmt.Sprintf("cannot obtain app: %v", err))
 		}

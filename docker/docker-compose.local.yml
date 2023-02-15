@@ -6,9 +6,9 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     environment:
-      MYSQL_USER: mastodonlog
+      MYSQL_USER: activitypublog
       MYSQL_PASSWORD: wohoho
-      MYSQL_DATABASE: mastodonlog
+      MYSQL_DATABASE: activitypublog
       MYSQL_HOST: db
     ports:
       - "3000:1323"
@@ -21,8 +21,8 @@ services:
       - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: password
-      MYSQL_DATABASE: mastodonlog
-      MYSQL_USER: mastodonlog
+      MYSQL_DATABASE: activitypublog
+      MYSQL_USER: activitypublog
       MYSQL_PASSWORD: wohoho
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]

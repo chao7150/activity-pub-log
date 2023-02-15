@@ -1,4 +1,4 @@
-module mastodon-blog
+module github.com/chao7150/activitypublog
 
 go 1.18
 
