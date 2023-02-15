@@ -78,11 +78,29 @@ func main() {
 
 	e := echo.New()
 	e.GET("/", func(c echo.Context) error {
-		cookie, err := c.Cookie("token")
+		tokenCookie, err := c.Cookie("token")
 		if err != nil {
 			return c.Redirect(302, "/login")
 		}
-		return c.String(http.StatusOK, cookie.Value)
+		token := tokenCookie.Value
+		hostCookie, err := c.Cookie("host")
+		if err != nil {
+			return c.Redirect(302, "/login")
+		}
+		host := hostCookie.Value
+		client := &http.Client{}
+		req, err := http.NewRequest("GET", "https://"+host+"/api/v1/accounts/verify_credentials", nil)
+		req.Header.Add("Authorization", "Bearer "+token)
+		resp, err := client.Do(req)
+		if err != nil {
+			return c.String(http.StatusBadRequest, fmt.Sprintf("failed to fetch user infomation: %v", err))
+		}
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to read response from server: %v", err))
+		}
+		return c.String(http.StatusOK, fmt.Sprintf("%s", body))
 	})
 	e.File("/login", "static/login.html")
 	e.POST("/sign_in", func(c echo.Context) error {
@@ -160,8 +178,12 @@ func main() {
 		cookie.Name = "token"
 		cookie.Value = r.AccessToken
 		cookie.Expires = time.Now().Add(24 * 7 * time.Hour)
-		cookie.Path = "/"
 		c.SetCookie(cookie)
+		hostCookie := http.Cookie{}
+		hostCookie.Name = "host"
+		hostCookie.Value = host
+		hostCookie.Expires = time.Now().Add(24 * 7 * time.Hour)
+		c.SetCookie(&hostCookie)
 		return c.Redirect(302, "/")
 	})
 
