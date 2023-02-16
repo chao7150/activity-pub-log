@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"text/template"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
@@ -49,7 +50,12 @@ func StartServer() {
 		fmt.Printf("failed to initialize db table: %v", err)
 	}
 
+	t := &Template{
+		templates: template.Must(template.ParseGlob("public/views/*.html")),
+	}
+
 	e := echo.New()
+	e.Renderer = t
 	e.GET("/", func(c echo.Context) error {
 		tokenCookie, err := c.Cookie("token")
 		if err != nil {
@@ -63,6 +69,9 @@ func StartServer() {
 		host := hostCookie.Value
 		client := &http.Client{}
 		req, err := http.NewRequest("GET", "https://"+host+"/api/v1/accounts/verify_credentials", nil)
+		if err != nil {
+			return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to verify credentials: %v", err))
+		}
 		req.Header.Add("Authorization", "Bearer "+token)
 		resp, err := client.Do(req)
 		if err != nil {
@@ -73,7 +82,7 @@ func StartServer() {
 		if err != nil {
 			return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to read response from server: %v", err))
 		}
-		return c.String(http.StatusOK, fmt.Sprintf("%s", body))
+		return c.Render(http.StatusOK, "top", string(body))
 	})
 	e.File("/login", "static/login.html")
 	e.POST("/sign_in", func(c echo.Context) error {
