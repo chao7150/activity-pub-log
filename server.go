@@ -67,22 +67,11 @@ func StartServer() {
 			return c.Redirect(302, "/login")
 		}
 		host := hostCookie.Value
-		client := &http.Client{}
-		req, err := http.NewRequest("GET", "https://"+host+"/api/v1/accounts/verify_credentials", nil)
+		account, nil := hGetVerifyCredentials(host, token)
 		if err != nil {
-			return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to verify credentials: %v", err))
+			return c.String(http.StatusInternalServerError, fmt.Sprintf("error GET /: %v", err))
 		}
-		req.Header.Add("Authorization", "Bearer "+token)
-		resp, err := client.Do(req)
-		if err != nil {
-			return c.String(http.StatusBadRequest, fmt.Sprintf("failed to fetch user infomation: %v", err))
-		}
-		defer resp.Body.Close()
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to read response from server: %v", err))
-		}
-		return c.Render(http.StatusOK, "top", string(body))
+		return c.Render(http.StatusOK, "top", account)
 	})
 	e.File("/login", "static/login.html")
 	e.POST("/sign_in", func(c echo.Context) error {
@@ -105,11 +94,12 @@ func StartServer() {
 		u.Path = "/oauth/authorize"
 		q := url.Values{"response_type": {"code"}, "client_id": {app.ClientId}, "redirect_uri": {"http://localhost:1323/authorize"}}
 		u.RawQuery = q.Encode()
-		cookie := new(http.Cookie)
-		cookie.Name = "authentication-ongoing-instance-name"
-		cookie.Value = host
-		cookie.Expires = time.Now().Add(5 * time.Minute)
-		cookie.Path = "/authorize"
+		cookie := &http.Cookie{
+			Name:    "authentication-ongoing-instance-name",
+			Value:   host,
+			Expires: time.Now().Add(5 * time.Minute),
+			Path:    "/authorize",
+		}
 		c.SetCookie(cookie)
 		return c.Redirect(302, u.String())
 	})
@@ -129,14 +119,12 @@ func StartServer() {
 			return c.String(http.StatusInternalServerError, fmt.Sprintf("cannot obtain app: %v", err))
 		}
 		q := url.Values{"grant_type": {"authorization_code"}, "code": {code}, "client_id": {app.ClientId}, "client_secret": {app.ClientSecret}, "redirect_uri": {"http://localhost:1323/authorize"}}
-		fmt.Println(q)
 		resp, err := http.PostForm(u.String(), q)
 		if err != nil {
 			return c.String(http.StatusBadRequest, fmt.Sprintf("failed to create app for the host: %v", err))
 		}
 		defer resp.Body.Close()
-		body, err := io.ReadAll(resp.Body)
-		fmt.Printf("body %s", body)
+		body, err := io.ReadAll(resp.Body)Println
 		if err != nil {
 			return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to read response from server: %v", err))
 		}
@@ -144,17 +132,18 @@ func StartServer() {
 		if err := json.Unmarshal(body, &r); err != nil {
 			return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to parse response from server: %v", err))
 		}
-		fmt.Printf("token %v", r)
-		cookie = new(http.Cookie)
-		cookie.Name = "token"
-		cookie.Value = r.AccessToken
-		cookie.Expires = time.Now().Add(24 * 7 * time.Hour)
-		c.SetCookie(cookie)
-		hostCookie := http.Cookie{}
-		hostCookie.Name = "host"
-		hostCookie.Value = host
-		hostCookie.Expires = time.Now().Add(24 * 7 * time.Hour)
-		c.SetCookie(&hostCookie)
+		tokenCookie := &http.Cookie{
+			Name:    "token",
+			Value:   r.AccessToken,
+			Expires: time.Now().Add(24 * 7 * time.Hour),
+		}
+		c.SetCookie(tokenCookie)
+		hostCookie := &http.Cookie{
+			Name:    "host",
+			Value:   host,
+			Expires: time.Now().Add(24 * 7 * time.Hour),
+		}
+		c.SetCookie(hostCookie)
 		return c.Redirect(302, "/")
 	})
 

@@ -5,3 +5,10 @@ type App struct {
 	ClientId     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
 }
+
+type Account struct {
+	Acct        string
+	Avatar      string
+	DisplayName string `json:"display_name"`
+	Url         string
+}

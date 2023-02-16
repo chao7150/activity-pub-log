@@ -27,3 +27,26 @@ func hPostApp(host string) (App, error) {
 	app.Host = host
 	return app, nil
 }
+
+func hGetVerifyCredentials(host string, token string) (Account, error) {
+	var account Account
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", "https://"+host+"/api/v1/accounts/verify_credentials", nil)
+	if err != nil {
+		return account, fmt.Errorf("failed to create request: %v", err)
+	}
+	req.Header.Add("Authorization", "Bearer "+token)
+	resp, err := client.Do(req)
+	if err != nil {
+		return account, fmt.Errorf("failed to GET verify_credentials: %v", err)
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return account, fmt.Errorf("failed to read response body: %v", err)
+	}
+	if err := json.Unmarshal(body, &account); err != nil {
+		return account, fmt.Errorf("failed to parse account data: %v", err)
+	}
+	return account, nil
+}
