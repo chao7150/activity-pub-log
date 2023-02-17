@@ -10,9 +10,17 @@
 </head>
 <body>
     <div class="account">
-        <img class="account-icon" src="{{.Avatar}}" width="100px">
-        <h2><a class="account-displayname" href="{{.Url}}">{{.DisplayName}}</div></h2>
+        <img class="account-icon" src="{{.Account.Avatar}}" width="100px">
+        <h2><a class="account-displayname" href="{{.Account.Url}}">{{.Account.DisplayName}}</a></h2>
     </div>
+    <ul>
+        {{range .Statuses}}
+            <li class="status">
+                <div class="status-createdat">{{.CreatedAt.Format "2006-01-02 15:04:05"}}</div>
+                <div>{{.Text}}</div>
+            </li>
+        {{end}}
+    </ul>
 </body>
 </html>
 {{end}}

@@ -7,3 +7,12 @@
 .account-displayname {
     vertical-align: middle;
 }
+
+.status {
+    display: flex;
+    gap: 10px;
+}
+
+.status-createdat {
+    flex-shrink: 0;
+}

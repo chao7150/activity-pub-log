@@ -72,7 +72,13 @@ func StartServer() {
 		if err != nil {
 			return c.String(http.StatusInternalServerError, fmt.Sprintf("error GET /: %v", err))
 		}
-		return c.Render(http.StatusOK, "top", account)
+		statuses, nil := hGetAccountStatuses(host, token, account.Id)
+		if err != nil {
+			return c.String(http.StatusInternalServerError, fmt.Sprintf("error Get /: %v", err))
+		}
+		props := TopProps{Account: account, Statuses: statuses}
+
+		return c.Render(http.StatusOK, "top", props)
 	})
 	e.File("/login", "static/login.html")
 	e.POST("/sign_in", func(c echo.Context) error {

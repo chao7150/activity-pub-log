@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 func hPostApp(host string) (App, error) {
@@ -49,4 +50,52 @@ func hGetVerifyCredentials(host string, token string) (Account, error) {
 		return account, fmt.Errorf("failed to parse account data: %v", err)
 	}
 	return account, nil
+}
+
+type hGetAccountStatusesResponse []struct {
+	Account   Account
+	Text      string
+	Url       string
+	CreatedAt string `json:"created_at"`
+	Tags      []Tag
+}
+
+func hGetAccountStatuses(host string, token string, id string) ([]Status, error) {
+	var statuses []Status
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", "https://"+host+"/api/v1/accounts/"+id+"/statuses", nil)
+	if err != nil {
+		return statuses, fmt.Errorf("failed to create request: %v", err)
+	}
+	req.Header.Add("Authorization", "Bearer "+token)
+	resp, err := client.Do(req)
+	if err != nil {
+		return statuses, fmt.Errorf("failed to GET accounts/:id/statuses: %v", err)
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return statuses, fmt.Errorf("failed to read response body: %v", err)
+	}
+	var res hGetAccountStatusesResponse
+	if err := json.Unmarshal(body, &res); err != nil {
+		return statuses, fmt.Errorf("failed to parse account data: %v", err)
+	}
+
+	location, _ := time.LoadLocation("Asia/Tokyo")
+	for _, v := range res {
+		ca, err := time.Parse(time.RFC3339, v.CreatedAt)
+		if err != nil {
+			continue
+		}
+		s := Status{
+			Account:   v.Account,
+			Text:      v.Text,
+			Url:       v.Url,
+			CreatedAt: ca.In(location),
+			Tags:      v.Tags,
+		}
+		statuses = append(statuses, s)
+	}
+	return statuses, nil
 }
