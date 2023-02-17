@@ -56,6 +56,7 @@ func StartServer() {
 
 	e := echo.New()
 	e.Renderer = t
+	e.Static("/static", "assets")
 	e.GET("/", func(c echo.Context) error {
 		tokenCookie, err := c.Cookie("token")
 		if err != nil {
@@ -124,7 +125,7 @@ func StartServer() {
 			return c.String(http.StatusBadRequest, fmt.Sprintf("failed to create app for the host: %v", err))
 		}
 		defer resp.Body.Close()
-		body, err := io.ReadAll(resp.Body)Println
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to read response from server: %v", err))
 		}
