@@ -53,6 +53,7 @@ func hGetVerifyCredentials(host string, token string) (Account, error) {
 }
 
 type hGetAccountStatusesResponse []struct {
+	Id        string
 	Account   Account
 	Text      string
 	Url       string
@@ -60,10 +61,10 @@ type hGetAccountStatusesResponse []struct {
 	Tags      []Tag
 }
 
-func hGetAccountStatuses(host string, token string, id string) ([]Status, error) {
+func hGetAccountStatusesNewerThan(host string, token string, id string, newestStatusId string) ([]Status, error) {
 	var statuses []Status
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", "https://"+host+"/api/v1/accounts/"+id+"/statuses", nil)
+	req, err := http.NewRequest("GET", "https://"+host+"/api/v1/accounts/"+id+"/statuses?min_id="+newestStatusId, nil)
 	if err != nil {
 		return statuses, fmt.Errorf("failed to create request: %v", err)
 	}
@@ -89,6 +90,7 @@ func hGetAccountStatuses(host string, token string, id string) ([]Status, error)
 			continue
 		}
 		s := Status{
+			Id:        v.Id,
 			Account:   v.Account,
 			Text:      v.Text,
 			Url:       v.Url,

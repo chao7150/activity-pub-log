@@ -28,11 +28,12 @@ type PostOauthTokenResponse struct {
 
 func StartServer() {
 	cfg := mysql.Config{
-		User:   os.Getenv("MYSQL_USER"),
-		Passwd: os.Getenv("MYSQL_PASSWORD"),
-		Net:    "tcp",
-		Addr:   os.Getenv("MYSQL_HOST") + ":3306",
-		DBName: os.Getenv("MYSQL_DATABASE"),
+		User:      os.Getenv("MYSQL_USER"),
+		Passwd:    os.Getenv("MYSQL_PASSWORD"),
+		Net:       "tcp",
+		Addr:      os.Getenv("MYSQL_HOST") + ":3306",
+		DBName:    os.Getenv("MYSQL_DATABASE"),
+		ParseTime: true,
 	}
 
 	var err error
@@ -45,9 +46,15 @@ func StartServer() {
 		log.Fatal(pingErr)
 	}
 	fmt.Println("datebase connection established.")
-	_, err = db.Exec("CREATE TABLE IF NOT EXISTS app (host VARCHAR(255), client_id VARCHAR(255), client_secret VARCHAR(255), PRIMARY KEY(`host`));")
-	if err != nil {
-		fmt.Printf("failed to initialize db table: %v", err)
+	var errors []error
+	if _, err = db.Exec("CREATE TABLE IF NOT EXISTS app (host VARCHAR(255), client_id VARCHAR(255), client_secret VARCHAR(255), PRIMARY KEY(`host`));"); err != nil {
+		errors = append(errors, err)
+	}
+	if _, err = db.Exec("CREATE TABLE IF NOT EXISTS status (id VARCHAR(255), accountId VARCHAR(255), text VARCHAR(10000), url VARCHAR(255), created_at datetime, PRIMARY KEY(`id`));"); err != nil {
+		errors = append(errors, err)
+	}
+	if 0 < len(errors) {
+		fmt.Printf("failed to initialize db table: %v", errors)
 	}
 
 	t := &Template{
@@ -72,11 +79,23 @@ func StartServer() {
 		if err != nil {
 			return c.String(http.StatusInternalServerError, fmt.Sprintf("error GET /: %v", err))
 		}
-		statuses, nil := hGetAccountStatuses(host, token, account.Id)
+		newestStatusId, err := dSelectNewestStatusIdByAccount(account.Id)
+		if err != nil {
+			return c.String(http.StatusInternalServerError, fmt.Sprintf("error GET /: %v", err))
+		}
+		newStatuses, nil := hGetAccountStatusesNewerThan(host, token, account.Id, newestStatusId)
 		if err != nil {
 			return c.String(http.StatusInternalServerError, fmt.Sprintf("error Get /: %v", err))
 		}
-		props := TopProps{Account: account, Statuses: statuses}
+		_, err = dInsertStatuses(newStatuses, account.Id)
+		if err != nil {
+			fmt.Printf("db insert error: %v", err)
+		}
+		allStatuses, err := dSelectStatusesByAccount(account.Id)
+		if err != nil {
+			return c.String(http.StatusInternalServerError, fmt.Sprintf("error Get /: %v", err))
+		}
+		props := TopProps{Account: account, Statuses: allStatuses}
 
 		return c.Render(http.StatusOK, "top", props)
 	})

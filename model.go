@@ -22,6 +22,7 @@ type Tag struct {
 }
 
 type Status struct {
+	Id        string
 	Account   Account
 	Text      string
 	Url       string
