@@ -39,7 +39,6 @@ func dInsertStatuses(statuses []Status, accountId string) (int64, error) {
 		vals = append(vals, v.Id, accountId, v.Text, v.Url, v.CreatedAt)
 	}
 	q := baseQuery + strings.Join(dataQueries, ",")
-	fmt.Println(q)
 	res, err := db.Exec(q, vals...)
 	if err != nil {
 		return 0, err
@@ -59,6 +58,18 @@ func dSelectNewestStatusIdByAccount(accoutId string) (string, error) {
 			return "", nil
 		}
 		return "", fmt.Errorf("dSelectNewestStatusIdByAccount: %v", err)
+	}
+	return id, nil
+}
+
+func dSelectOldestStatusIdByAccount(accoutId string) (string, error) {
+	var id string
+	row := db.QueryRow("SELECT id FROM status WHERE accountId = ? ORDER BY id ASC LIMIT 1", accoutId)
+	if err := row.Scan(&id); err != nil {
+		if err == sql.ErrNoRows {
+			return "", nil
+		}
+		return "", fmt.Errorf("dSelectOldestStatusIdByAccount: %v", err)
 	}
 	return id, nil
 }

@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/go-sql-driver/mysql"
-	"github.com/labstack/echo/v4"
 	"github.com/joho/godotenv"
+	"github.com/labstack/echo/v4"
 )
 
 var db *sql.DB
@@ -71,19 +71,30 @@ func StartServer() {
 	e.Renderer = t
 	e.Static("/static", "assets")
 	e.GET("/", func(c echo.Context) error {
-		tokenCookie, err := c.Cookie("token")
+		token, host, err := RequireLoggedIn(c)
 		if err != nil {
-			return c.Redirect(302, "/login")
+			return err
 		}
-		token := tokenCookie.Value
-		hostCookie, err := c.Cookie("host")
-		if err != nil {
-			return c.Redirect(302, "/login")
-		}
-		host := hostCookie.Value
 		account, nil := hGetVerifyCredentials(host, token)
 		if err != nil {
 			return c.String(http.StatusInternalServerError, fmt.Sprintf("error GET /: %v", err))
+		}
+		allStatuses, err := dSelectStatusesByAccount(account.Id)
+		if err != nil {
+			return c.String(http.StatusInternalServerError, fmt.Sprintf("error Get /: %v", err))
+		}
+		props := TopProps{Account: account, Statuses: allStatuses}
+
+		return c.Render(http.StatusOK, "top", props)
+	})
+	e.POST("/status/cursor/head", func(c echo.Context) error {
+		token, host, err := RequireLoggedIn(c)
+		if err != nil {
+			return err
+		}
+		account, nil := hGetVerifyCredentials(host, token)
+		if err != nil {
+			return c.String(http.StatusInternalServerError, fmt.Sprintf("error GET /status/cursor/head: %v", err))
 		}
 		newestStatusId, err := dSelectNewestStatusIdByAccount(account.Id)
 		if err != nil {
@@ -97,13 +108,53 @@ func StartServer() {
 		if err != nil {
 			fmt.Printf("db insert error: %v", err)
 		}
-		allStatuses, err := dSelectStatusesByAccount(account.Id)
+		return c.Redirect(302, "/")
+	})
+	e.POST("/status/cursor/head", func(c echo.Context) error {
+		token, host, err := RequireLoggedIn(c)
+		if err != nil {
+			return err
+		}
+		account, nil := hGetVerifyCredentials(host, token)
+		if err != nil {
+			return c.String(http.StatusInternalServerError, fmt.Sprintf("error GET /status/cursor/head: %v", err))
+		}
+		newestStatusId, err := dSelectNewestStatusIdByAccount(account.Id)
+		if err != nil {
+			return c.String(http.StatusInternalServerError, fmt.Sprintf("error GET /: %v", err))
+		}
+		newStatuses, nil := hGetAccountStatusesNewerThan(host, token, account.Id, newestStatusId)
 		if err != nil {
 			return c.String(http.StatusInternalServerError, fmt.Sprintf("error Get /: %v", err))
 		}
-		props := TopProps{Account: account, Statuses: allStatuses}
-
-		return c.Render(http.StatusOK, "top", props)
+		_, err = dInsertStatuses(newStatuses, account.Id)
+		if err != nil {
+			fmt.Printf("db insert error: %v", err)
+		}
+		return c.Redirect(302, "/")
+	})
+	e.POST("/status/cursor/last", func(c echo.Context) error {
+		token, host, err := RequireLoggedIn(c)
+		if err != nil {
+			return err
+		}
+		account, nil := hGetVerifyCredentials(host, token)
+		if err != nil {
+			return c.String(http.StatusInternalServerError, fmt.Sprintf("error GET /status/cursor/last: %v", err))
+		}
+		oldestStatusId, err := dSelectOldestStatusIdByAccount(account.Id)
+		if err != nil {
+			return c.String(http.StatusInternalServerError, fmt.Sprintf("error GET /status/cursor/last: %v", err))
+		}
+		newStatuses, nil := hGetAccountStatusesOlderThan(host, token, account.Id, oldestStatusId)
+		if err != nil {
+			return c.String(http.StatusInternalServerError, fmt.Sprintf("error GET /status/cursor/last: %v", err))
+		}
+		_, err = dInsertStatuses(newStatuses, account.Id)
+		if err != nil {
+			fmt.Printf("db insert error: %v", err)
+		}
+		return c.Redirect(302, "/")
 	})
 	e.File("/login", "static/login.html")
 	e.POST("/sign_in", func(c echo.Context) error {

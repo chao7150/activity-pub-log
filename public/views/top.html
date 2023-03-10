@@ -13,6 +13,10 @@
         <img class="account-icon" src="{{.Account.Avatar}}" width="100px">
         <h2><a class="account-displayname" href="{{.Account.Url}}">{{.Account.DisplayName}}</a></h2>
     </div>
+    <ul class="load-button-list">
+            <li class="load-button"><form action="/status/cursor/last" method="post"><button>より古い投稿を読み込む</button></form></li>
+            <li class="load-button"><form action="/status/cursor/head" method="post"><button>より新しい投稿を読み込む</button></form></li>
+    </ul>
     <ul>
         {{range .Statuses}}
             <li class="status">
@@ -20,6 +24,10 @@
                 <div>{{.Text}}</div>
             </li>
         {{end}}
+    </ul>
+    <ul class="load-button-list">
+        <li class="load-button"><form action="/status/cursor/last" method="post"><button>より古い投稿を読み込む</button></form></li>
+        <li class="load-button"><form action="/status/cursor/head" method="post"><button>より新しい投稿を読み込む</button></form></li>
     </ul>
 </body>
 </html>
