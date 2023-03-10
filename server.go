@@ -162,7 +162,7 @@ func StartServer() {
 		app, err := dSelectAppByHost(host)
 		if err != nil {
 			fmt.Printf("app data was not found in db. fetch it.")
-			app, err = hPostApp(host)
+			app, err = hPostApp(host, os.Getenv("HOST"))
 			if err != nil {
 				return c.String(http.StatusInternalServerError, fmt.Sprintf("post app failed: %v", err))
 			}
@@ -175,7 +175,7 @@ func StartServer() {
 		u.Scheme = "https"
 		u.Host = host
 		u.Path = "/oauth/authorize"
-		q := url.Values{"response_type": {"code"}, "client_id": {app.ClientId}, "redirect_uri": {"http://localhost:1323/authorize"}}
+		q := url.Values{"response_type": {"code"}, "client_id": {app.ClientId}, "redirect_uri": {"https://" + os.Getenv("HOST") + "/authorize"}}
 		u.RawQuery = q.Encode()
 		cookie := &http.Cookie{
 			Name:    "authentication-ongoing-instance-name",
@@ -201,7 +201,7 @@ func StartServer() {
 		if err != nil {
 			return c.String(http.StatusInternalServerError, fmt.Sprintf("cannot obtain app: %v", err))
 		}
-		q := url.Values{"grant_type": {"authorization_code"}, "code": {code}, "client_id": {app.ClientId}, "client_secret": {app.ClientSecret}, "redirect_uri": {"http://localhost:1323/authorize"}}
+		q := url.Values{"grant_type": {"authorization_code"}, "code": {code}, "client_id": {app.ClientId}, "client_secret": {app.ClientSecret}, "redirect_uri": {"https://" + os.Getenv("HOST") + "/authorize"}}
 		resp, err := http.PostForm(u.String(), q)
 		if err != nil {
 			return c.String(http.StatusBadRequest, fmt.Sprintf("failed to create app for the host: %v", err))
