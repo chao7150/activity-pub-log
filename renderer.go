@@ -16,6 +16,7 @@ func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Con
 }
 
 type TopProps struct {
-	Account  Account
-	Statuses []Status
+	Account    Account
+	Statuses   []Status
+	AllFetched bool
 }

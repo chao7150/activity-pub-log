@@ -9,10 +9,10 @@ import (
 	"time"
 )
 
-func hPostApp(host string, myHost string) (App, error) {
+func hPostApp(host string, baseUrl string) (App, error) {
 	var app App
-	path := "https://" + host + "/api/v1/apps"
-	resp, err := http.PostForm(path, url.Values{"client_name": {"chao-activitypublog"}, "redirect_uris": {"https://" + myHost + "/authorize"}})
+	path := baseUrl + "/api/v1/apps"
+	resp, err := http.PostForm(path, url.Values{"client_name": {"chao-activitypublog"}, "redirect_uris": {baseUrl + "/authorize"}})
 	if err != nil {
 		return app, fmt.Errorf("failed to create app for the host: %v", err)
 	}

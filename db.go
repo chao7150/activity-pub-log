@@ -95,3 +95,35 @@ func dSelectStatusesByAccount(accountId string) ([]Status, error) {
 	}
 	return statuses, nil
 }
+
+func dInsertAccount(accountId string) (int64, error) {
+	res, err := db.Exec("INSERT INTO account (id, all_fetched) VALUES (?, false)", accountId)
+	if err != nil {
+		return 0, err
+	}
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	return rowsAffected, nil
+}
+
+func dSelectAccountAllFetchedById(accountId string) (bool, error) {
+	var allFetched bool
+	row := db.QueryRow("SELECT all_fetched FROM account WHERE id = ?", accountId)
+	if err := row.Scan(&allFetched); err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		return false, fmt.Errorf("dSelectAccountAllFetchedById: %v", err)
+	}
+	return allFetched, nil
+}
+
+func dUpdateAccountAllFetched(accountId string) error {
+	_, err := db.Exec("UPDATE account set all_fetched = true where id = ?", accountId)
+	if err != nil {
+		return err
+	}
+	return nil
+}

@@ -2,15 +2,11 @@ FROM golang:1.20.0-alpine3.17
 
 WORKDIR /app
 
-COPY go.mod ./
-COPY go.sum ./
+COPY . ./
 RUN go mod download
 
-
-COPY server.go ./
-
-RUN go build server.go
+RUN go build cmd/server/main.go
 
 EXPOSE 1323
 
-CMD [ "./server" ]
+CMD [ "./main" ]
