@@ -96,6 +96,28 @@ func dSelectStatusesByAccount(accountId string) ([]Status, error) {
 	return statuses, nil
 }
 
+func dSelectStatusesByAccountAndText(accountId string, includedText string) ([]Status, error) {
+	var statuses []Status
+
+	rows, err := db.Query("SELECT * FROM status WHERE accountId = ? AND text LIKE CONCAT('%', ?, '%') ORDER BY id DESC", accountId, includedText)
+	if err != nil {
+		return nil, fmt.Errorf("dSelectStatusesByAccountAndText: %v", err)
+	}
+	defer rows.Close()
+	var discard string
+	for rows.Next() {
+		var status Status
+		if err := rows.Scan(&status.Id, &discard, &status.Text, &status.Url, &status.CreatedAt); err != nil {
+			return nil, fmt.Errorf("dSelectStatusesByAccountAndText: %v", err)
+		}
+		statuses = append(statuses, status)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("dSelectStatusesByAccountAndText: %v", err)
+	}
+	return statuses, nil
+}
+
 func dInsertAccount(accountId string) (int64, error) {
 	res, err := db.Exec("INSERT INTO account (id, all_fetched) VALUES (?, false)", accountId)
 	if err != nil {

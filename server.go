@@ -83,7 +83,8 @@ func StartServer() {
 		if err != nil {
 			return SendAndOutputError(err)
 		}
-		allStatuses, err := dSelectStatusesByAccount(account.Id)
+		query := c.QueryParam("q")
+		allStatuses, err := dSelectStatusesByAccountAndText(account.Id, query)
 		if err != nil {
 			return SendAndOutputError(err)
 		}
