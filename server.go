@@ -162,6 +162,21 @@ func StartServer() {
 		return c.Redirect(302, "/")
 	})
 	e.File("/login", "static/login.html")
+	e.GET("/logout", func(c echo.Context) error {
+		tokenCookie := &http.Cookie{
+			Name:    "token",
+			Value:   "",
+			Expires: time.Unix(0, 0),
+		}
+		c.SetCookie(tokenCookie)
+		hostCookie := &http.Cookie{
+			Name:    "host",
+			Value:   "",
+			Expires: time.Unix(0, 0),
+		}
+		c.SetCookie(hostCookie)
+		return c.Redirect(302, "/login")
+	})
 	e.POST("/sign_in", func(c echo.Context) error {
 		SendAndOutputError := HandlerError("POST", "/sign_in", c)
 		host := c.FormValue("host")
@@ -226,7 +241,7 @@ func StartServer() {
 		if err != nil {
 			return SendAndOutputError(err)
 		}
-		_, err = dInsertAccount(account.Id)
+		_, err = dInsertAccountIfNotExists(account.Id)
 		if err != nil {
 			return SendAndOutputError(err)
 		}

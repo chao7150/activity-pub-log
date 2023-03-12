@@ -118,8 +118,8 @@ func dSelectStatusesByAccountAndText(accountId string, includedText string) ([]S
 	return statuses, nil
 }
 
-func dInsertAccount(accountId string) (int64, error) {
-	res, err := db.Exec("INSERT INTO account (id, all_fetched) VALUES (?, false)", accountId)
+func dInsertAccountIfNotExists(accountId string) (int64, error) {
+	res, err := db.Exec("INSERT INTO account SELECT * FROM (SELECT ?, false) AS tmp WHERE NOT EXISTS (SELECT id FROM account WHERE id = ?) LIMIT 1", accountId, accountId)
 	if err != nil {
 		return 0, err
 	}
