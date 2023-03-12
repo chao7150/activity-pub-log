@@ -56,10 +56,10 @@ func StartServer() {
 	if _, err = db.Exec("CREATE TABLE IF NOT EXISTS app (host VARCHAR(255), client_id VARCHAR(255), client_secret VARCHAR(255), PRIMARY KEY(`host`));"); err != nil {
 		errors = append(errors, err)
 	}
-	if _, err = db.Exec("CREATE TABLE IF NOT EXISTS status (id VARCHAR(255), accountId VARCHAR(255), text VARCHAR(10000), url VARCHAR(255), created_at datetime, PRIMARY KEY(`id`));"); err != nil {
+	if _, err = db.Exec("CREATE TABLE IF NOT EXISTS account (id VARCHAR(255), all_fetched boolean DEFAULT false, PRIMARY KEY(`id`));"); err != nil {
 		errors = append(errors, err)
 	}
-	if _, err = db.Exec("CREATE TABLE IF NOT EXISTS account (id VARCHAR(255), all_fetched boolean DEFAULT false, PRIMARY KEY(`id`));"); err != nil {
+	if _, err = db.Exec("CREATE TABLE IF NOT EXISTS status (id VARCHAR(255), accountId VARCHAR(255), text VARCHAR(10000), url VARCHAR(255), created_at datetime, PRIMARY KEY(`id`), FOREIGN KEY (`accountId`) REFERENCES account (`id`));"); err != nil {
 		errors = append(errors, err)
 	}
 	if 0 < len(errors) {
