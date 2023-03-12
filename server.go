@@ -74,17 +74,18 @@ func StartServer() {
 	e.Renderer = t
 	e.Static("/static", "assets")
 	e.GET("/", func(c echo.Context) error {
+		SendAndOutputError := HandlerError("GET", "/", c)
 		token, host, err := RequireLoggedIn(c)
 		if err != nil {
 			return err
 		}
 		account, nil := hGetVerifyCredentials(host, token)
 		if err != nil {
-			return c.String(http.StatusInternalServerError, fmt.Sprintf("error GET /: %v", err))
+			return SendAndOutputError(err)
 		}
 		allStatuses, err := dSelectStatusesByAccount(account.Id)
 		if err != nil {
-			return c.String(http.StatusInternalServerError, fmt.Sprintf("error Get /: %v", err))
+			return SendAndOutputError(err)
 		}
 		allFetched := c.QueryParam("allFetched") == "true"
 		props := TopProps{Account: account, Statuses: allStatuses, AllFetched: allFetched}
@@ -92,21 +93,22 @@ func StartServer() {
 		return c.Render(http.StatusOK, "top", props)
 	})
 	e.POST("/status/cursor/head", func(c echo.Context) error {
+		SendAndOutputError := HandlerError("POST", "/status/cursor/head", c)
 		token, host, err := RequireLoggedIn(c)
 		if err != nil {
 			return err
 		}
 		account, nil := hGetVerifyCredentials(host, token)
 		if err != nil {
-			return c.String(http.StatusInternalServerError, fmt.Sprintf("error GET /status/cursor/head: %v", err))
+			return SendAndOutputError(err)
 		}
 		newestStatusId, err := dSelectNewestStatusIdByAccount(account.Id)
 		if err != nil {
-			return c.String(http.StatusInternalServerError, fmt.Sprintf("error GET /status/cursor/head: %v", err))
+			return SendAndOutputError(err)
 		}
 		newStatuses, nil := hGetAccountStatusesNewerThan(host, token, account.Id, newestStatusId)
 		if err != nil {
-			return c.String(http.StatusInternalServerError, fmt.Sprintf("error GET /status/cursor/head: %v", err))
+			return SendAndOutputError(err)
 		}
 		_, err = dInsertStatuses(newStatuses, account.Id)
 		if err != nil {
@@ -114,7 +116,7 @@ func StartServer() {
 		}
 		allFetched, err := dSelectAccountAllFetchedById(account.Id)
 		if err != nil {
-			return c.String(http.StatusInternalServerError, fmt.Sprintf("error GET /status/cursor/head: %v", err))
+			return SendAndOutputError(err)
 		}
 		if allFetched {
 			c.Redirect(302, "/?allFetched=true")
@@ -122,32 +124,33 @@ func StartServer() {
 		return c.Redirect(302, "/")
 	})
 	e.POST("/status/cursor/last", func(c echo.Context) error {
+		SendAndOutputError := HandlerError("POST", "/status/cursor/last", c)
 		token, host, err := RequireLoggedIn(c)
 		if err != nil {
 			return err
 		}
 		account, nil := hGetVerifyCredentials(host, token)
 		if err != nil {
-			return c.String(http.StatusInternalServerError, fmt.Sprintf("error GET /status/cursor/last: %v", err))
+			return SendAndOutputError(err)
 		}
 		allFetched, err := dSelectAccountAllFetchedById(account.Id)
 		if err != nil {
-			return c.String(http.StatusInternalServerError, fmt.Sprintf("error GET /status/cursor/last: %v", err))
+			return SendAndOutputError(err)
 		}
 		if allFetched {
 			return c.Redirect(302, "/?allFetched=true")
 		}
 		oldestStatusId, err := dSelectOldestStatusIdByAccount(account.Id)
 		if err != nil {
-			return c.String(http.StatusInternalServerError, fmt.Sprintf("error GET /status/cursor/last: %v", err))
+			return SendAndOutputError(err)
 		}
 		newStatuses, nil := hGetAccountStatusesOlderThan(host, token, account.Id, oldestStatusId)
 		if err != nil {
-			return c.String(http.StatusInternalServerError, fmt.Sprintf("error GET /status/cursor/last: %v", err))
+			return SendAndOutputError(err)
 		}
 		if len(newStatuses) == 0 {
 			if err := dUpdateAccountAllFetched(account.Id); err != nil {
-				return c.String(http.StatusInternalServerError, fmt.Sprintf("error GET /status/cursor/last: %v", err))
+				return SendAndOutputError(err)
 			}
 			return c.Redirect(302, "/?allFetched=true")
 		}
@@ -159,17 +162,18 @@ func StartServer() {
 	})
 	e.File("/login", "static/login.html")
 	e.POST("/sign_in", func(c echo.Context) error {
+		SendAndOutputError := HandlerError("POST", "/sign_in", c)
 		host := c.FormValue("host")
 		app, err := dSelectAppByHost(host)
 		if err != nil {
 			fmt.Printf("app data was not found in db. fetch it.")
 			app, err = hPostApp(host, os.Getenv("BASE_URL"))
 			if err != nil {
-				return c.String(http.StatusInternalServerError, fmt.Sprintf("post app failed: %v", err))
+				return SendAndOutputError(err)
 			}
 			err = dInsertApp(app)
 			if err != nil {
-				return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to insert app to db: %v", err))
+				return SendAndOutputError(err)
 			}
 		}
 		u := url.URL{}
@@ -188,6 +192,7 @@ func StartServer() {
 		return c.Redirect(302, u.String())
 	})
 	e.GET("/authorize", func(c echo.Context) error {
+		SendAndOutputError := HandlerError("GET", "/authorize", c)
 		cookie, err := c.Cookie("authentication-ongoing-instance-name")
 		if err != nil {
 			return c.Redirect(302, "/")
@@ -200,7 +205,7 @@ func StartServer() {
 		u.Path = "/oauth/token"
 		app, err := dSelectAppByHost(host)
 		if err != nil {
-			return c.String(http.StatusInternalServerError, fmt.Sprintf("cannot obtain app: %v", err))
+			return SendAndOutputError(err)
 		}
 		q := url.Values{"grant_type": {"authorization_code"}, "code": {code}, "client_id": {app.ClientId}, "client_secret": {app.ClientSecret}, "redirect_uri": {os.Getenv("BASE_URL") + "/authorize"}}
 		resp, err := http.PostForm(u.String(), q)
@@ -218,11 +223,11 @@ func StartServer() {
 		}
 		account, err := hGetVerifyCredentials(host, r.AccessToken)
 		if err != nil {
-			return c.String(http.StatusInternalServerError, fmt.Sprintf("error GET /authorize: %v", err))
+			return SendAndOutputError(err)
 		}
 		_, err = dInsertAccount(account.Id)
 		if err != nil {
-			return c.String(http.StatusInternalServerError, fmt.Sprintf("error GET /authorize: %v", err))
+			return SendAndOutputError(err)
 		}
 		tokenCookie := &http.Cookie{
 			Name:    "token",
