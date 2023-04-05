@@ -47,6 +47,7 @@ func hGetVerifyCredentials(host string, token string) (Account, error) {
 		return account, fmt.Errorf("failed to read response body: %v", err)
 	}
 	if err := json.Unmarshal(body, &account); err != nil {
+		fmt.Printf("failed to parse account data: raw data: %v", body)
 		return account, fmt.Errorf("failed to parse account data: %v", err)
 	}
 	return account, nil
@@ -80,6 +81,7 @@ func hGetAccountStatusesNewerThan(host string, token string, id string, newestSt
 	}
 	var res hGetAccountStatusesResponse
 	if err := json.Unmarshal(body, &res); err != nil {
+		fmt.Printf("failed to parse account data: raw data: %v", body)
 		return statuses, fmt.Errorf("failed to parse account data: %v", err)
 	}
 
@@ -121,6 +123,7 @@ func hGetAccountStatusesOlderThan(host string, token string, id string, oldestSt
 	}
 	var res hGetAccountStatusesResponse
 	if err := json.Unmarshal(body, &res); err != nil {
+		fmt.Printf("failed to parse account data: raw data: %v", body)
 		return statuses, fmt.Errorf("failed to parse account data: %v", err)
 	}
 
