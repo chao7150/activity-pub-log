@@ -141,25 +141,27 @@ func StartServer() {
 		if allFetched {
 			return c.Redirect(302, "/?allFetched=true")
 		}
-		oldestStatusId, err := dSelectOldestStatusIdByAccount(account.Id)
-		if err != nil {
-			return SendAndOutputError(err)
-		}
-		newStatuses, nil := hGetAccountStatusesOlderThan(host, token, account.Id, oldestStatusId)
-		if err != nil {
-			return SendAndOutputError(err)
-		}
-		if len(newStatuses) == 0 {
-			if err := dUpdateAccountAllFetched(account.Id); err != nil {
+		for {
+			oldestStatusId, err := dSelectOldestStatusIdByAccount(account.Id)
+			if err != nil {
 				return SendAndOutputError(err)
 			}
-			return c.Redirect(302, "/?allFetched=true")
+			newStatuses, nil := hGetAccountStatusesOlderThan(host, token, account.Id, oldestStatusId)
+			if err != nil {
+				return SendAndOutputError(err)
+			}
+			if len(newStatuses) == 0 {
+				if err := dUpdateAccountAllFetched(account.Id); err != nil {
+					return SendAndOutputError(err)
+				}
+				return c.Redirect(302, "/")
+			}
+			_, err = dInsertStatuses(newStatuses, account.Id)
+			if err != nil {
+				fmt.Printf("db insert error: %v", err)
+			}
+			time.Sleep(time.Second * 2);
 		}
-		_, err = dInsertStatuses(newStatuses, account.Id)
-		if err != nil {
-			fmt.Printf("db insert error: %v", err)
-		}
-		return c.Redirect(302, "/")
 	})
 	e.File("/login", "static/login.html")
 	e.GET("/logout", func(c echo.Context) error {
