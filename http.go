@@ -62,10 +62,10 @@ type hGetAccountStatusesResponse []struct {
 	Tags      []Tag
 }
 
-func hGetAccountStatusesNewerThan(host string, token string, id string, newestStatusId string) ([]Status, error) {
+func hGetAccountStatuses(host string, token string, id string, params string) ([]Status, error) {
 	var statuses []Status
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", "https://"+host+"/api/v1/accounts/"+id+"/statuses?min_id="+newestStatusId, nil)
+	req, err := http.NewRequest("GET", "https://"+host+"/api/v1/accounts/"+id+"/statuses?"+params, nil)
 	if err != nil {
 		return statuses, fmt.Errorf("failed to create request: %v", err)
 	}
@@ -104,44 +104,27 @@ func hGetAccountStatusesNewerThan(host string, token string, id string, newestSt
 	return statuses, nil
 }
 
-func hGetAccountStatusesOlderThan(host string, token string, id string, oldestStatusId string) ([]Status, error) {
-	var statuses []Status
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", "https://"+host+"/api/v1/accounts/"+id+"/statuses?max_id="+oldestStatusId, nil)
-	if err != nil {
-		return statuses, fmt.Errorf("failed to create request: %v", err)
-	}
-	req.Header.Add("Authorization", "Bearer "+token)
-	resp, err := client.Do(req)
-	if err != nil {
-		return statuses, fmt.Errorf("failed to GET accounts/:id/statuses: %v", err)
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return statuses, fmt.Errorf("failed to read response body: %v", err)
-	}
-	var res hGetAccountStatusesResponse
-	if err := json.Unmarshal(body, &res); err != nil {
-		fmt.Printf("failed to parse account data: raw data: %v", body)
-		return statuses, fmt.Errorf("failed to parse account data: %v", err)
-	}
+func hGetAccountStatusesNewerThan(host string, token string, id string, minId string) ([]Status, error) {
+	return hGetAccountStatuses(host, token, id, "min_id="+minId)
+}
 
-	location, _ := time.LoadLocation("Asia/Tokyo")
-	for _, v := range res {
-		ca, err := time.Parse(time.RFC3339, v.CreatedAt)
+func hGetAccountStatusesOlderThan(host string, token string, id string, maxId string) ([]Status, error) {
+	return hGetAccountStatuses(host, token, id, "max_id="+maxId)
+}
+
+func hGetAccountStatusesAll(host string, token string, id string, minId string, maxId string) ([]Status, error) {
+	var statuses []Status
+	for {
+		s, err := hGetAccountStatuses(host, token, id, "max_id="+maxId+"&min_id="+minId)
 		if err != nil {
-			continue
+			return statuses, err
 		}
-		s := Status{
-			Id:        v.Id,
-			Account:   v.Account,
-			Text:      v.Text,
-			Url:       v.Url,
-			CreatedAt: ca.In(location),
-			Tags:      v.Tags,
+		if len(s) == 0 {
+			break
 		}
-		statuses = append(statuses, s)
+		statuses = append(statuses, s...)
+		maxId = s[len(s)-1].Id
+		time.Sleep(time.Second * 2)
 	}
 	return statuses, nil
 }

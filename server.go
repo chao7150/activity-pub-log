@@ -107,20 +107,13 @@ func StartServer() {
 		if err != nil {
 			return SendAndOutputError(err)
 		}
-		newStatuses, nil := hGetAccountStatusesNewerThan(host, token, account.Id, newestStatusId)
+		newStatuses, nil := hGetAccountStatusesAll(host, token, account.Id, newestStatusId, "")
 		if err != nil {
 			return SendAndOutputError(err)
 		}
 		_, err = dInsertStatuses(newStatuses, account.Id)
 		if err != nil {
 			fmt.Printf("db insert error: %v", err)
-		}
-		allFetched, err := dSelectAccountAllFetchedById(account.Id)
-		if err != nil {
-			return SendAndOutputError(err)
-		}
-		if allFetched {
-			c.Redirect(302, "/?allFetched=true")
 		}
 		return c.Redirect(302, "/")
 	})
@@ -160,7 +153,7 @@ func StartServer() {
 			if err != nil {
 				fmt.Printf("db insert error: %v", err)
 			}
-			time.Sleep(time.Second * 2);
+			time.Sleep(time.Second * 2)
 		}
 	})
 	e.File("/login", "static/login.html")
