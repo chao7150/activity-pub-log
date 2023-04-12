@@ -92,8 +92,8 @@ func dSelectStatusesByAccountAndText(accountId string, includedText string) ([]S
 	return statuses, nil
 }
 
-func dInsertAccountIfNotExists(accountId string) (int64, error) {
-	res, err := db.Exec("INSERT INTO account SELECT * FROM (SELECT ?, false) AS tmp WHERE NOT EXISTS (SELECT id FROM account WHERE id = ?) LIMIT 1", accountId, accountId)
+func dInsertAccountIfNotExists(acct string, accountId string) (int64, error) {
+	res, err := db.Exec("INSERT INTO account SELECT * FROM (SELECT ? as c1, ? as c2, false) AS tmp WHERE NOT EXISTS (SELECT id FROM account WHERE id = ?) LIMIT 1", acct, accountId, accountId)
 	if err != nil {
 		return 0, fmt.Errorf("failed to insert account: %v", err)
 	}
@@ -122,4 +122,26 @@ func dUpdateAccountAllFetched(accountId string) error {
 		return err
 	}
 	return nil
+}
+
+// get statuses from db by account acct joined with account table
+func dSelectStatusesByAccount(acct string) ([]Status, error) {
+	var statuses []Status
+
+	rows, err := db.Query("SELECT text, created_at FROM status WHERE accountId = ? ORDER BY id DESC", acct)
+	if err != nil {
+		return nil, fmt.Errorf("query failed: %v", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var status Status
+		if err := rows.Scan(&status.Text, &status.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scan failed: %v", err)
+		}
+		statuses = append(statuses, status)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows included error: %v", err)
+	}
+	return statuses, nil
 }

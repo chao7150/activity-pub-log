@@ -56,10 +56,10 @@ func StartServer() {
 	if _, err = db.Exec("CREATE TABLE IF NOT EXISTS app (host VARCHAR(255), client_id VARCHAR(255), client_secret VARCHAR(255), PRIMARY KEY(`host`));"); err != nil {
 		errors = append(errors, err)
 	}
-	if _, err = db.Exec("CREATE TABLE IF NOT EXISTS account (id VARCHAR(255), all_fetched boolean DEFAULT false, PRIMARY KEY(`id`));"); err != nil {
+	if _, err = db.Exec("CREATE TABLE IF NOT EXISTS account (acct VARCHAR(255), id VARCHAR(255), all_fetched boolean DEFAULT false, PRIMARY KEY(`acct`), INDEX (`id`));"); err != nil {
 		errors = append(errors, err)
 	}
-	if _, err = db.Exec("CREATE TABLE IF NOT EXISTS status (id VARCHAR(255), accountId VARCHAR(255), text VARCHAR(10000), url VARCHAR(255), created_at datetime, PRIMARY KEY(`id`), FOREIGN KEY (`accountId`) REFERENCES account (`id`));"); err != nil {
+	if _, err = db.Exec("CREATE TABLE IF NOT EXISTS status (id VARCHAR(255), accountId VARCHAR(255), text VARCHAR(10000), url VARCHAR(255), created_at datetime, PRIMARY KEY(`id`), FOREIGN KEY (`accountId`) REFERENCES account (`acct`));"); err != nil {
 		errors = append(errors, err)
 	}
 	if 0 < len(errors) {
@@ -236,7 +236,7 @@ func StartServer() {
 		if err != nil {
 			return SendAndOutputError(err)
 		}
-		_, err = dInsertAccountIfNotExists(account.Id)
+		_, err = dInsertAccountIfNotExists(account.Id, account.Acct)
 		if err != nil {
 			return SendAndOutputError(err)
 		}
@@ -253,6 +253,17 @@ func StartServer() {
 		}
 		c.SetCookie(hostCookie)
 		return c.Redirect(302, "/")
+	})
+	e.GET("/users/:acct", func(c echo.Context) error {
+		SendAndOutputError := HandlerError("GET", "/users/:acct", c)
+		acct := c.Param("acct")
+		fmt.Println(acct)
+		statuses, err := dSelectStatusesByAccount(acct)
+		if err != nil {
+			return SendAndOutputError(err)
+		}
+
+		return c.String(http.StatusOK, fmt.Sprintf("%v", statuses))
 	})
 
 	e.Logger.Fatal(e.Start(":1323"))
