@@ -14,6 +14,7 @@ type Account struct {
 	Avatar      string
 	DisplayName string `json:"display_name"`
 	Url         string
+	UserName    string
 }
 
 type Tag struct {

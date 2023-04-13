@@ -56,10 +56,10 @@ func StartServer() {
 	if _, err = db.Exec("CREATE TABLE IF NOT EXISTS app (host VARCHAR(255), client_id VARCHAR(255), client_secret VARCHAR(255), PRIMARY KEY(`host`));"); err != nil {
 		errors = append(errors, err)
 	}
-	if _, err = db.Exec("CREATE TABLE IF NOT EXISTS account (acct VARCHAR(255), id VARCHAR(255), all_fetched boolean DEFAULT false, PRIMARY KEY(`acct`), INDEX (`id`));"); err != nil {
+	if _, err = db.Exec("CREATE TABLE IF NOT EXISTS account (id VARCHAR(255), username VARCHAR(255), host VARCHAR(255), all_fetched boolean DEFAULT false, PRIMARY KEY(`id`, `host`));"); err != nil {
 		errors = append(errors, err)
 	}
-	if _, err = db.Exec("CREATE TABLE IF NOT EXISTS status (id VARCHAR(255), accountId VARCHAR(255), text VARCHAR(10000), url VARCHAR(255), created_at datetime, PRIMARY KEY(`id`), FOREIGN KEY (`accountId`) REFERENCES account (`acct`));"); err != nil {
+	if _, err = db.Exec("CREATE TABLE IF NOT EXISTS status (id VARCHAR(255), host VARCHAR(255), accountId VARCHAR(255), text VARCHAR(10000), url VARCHAR(255), created_at datetime, PRIMARY KEY(`id`, `host`), FOREIGN KEY (`accountId`, `host`) REFERENCES account (`id`, `host`));"); err != nil {
 		errors = append(errors, err)
 	}
 	if 0 < len(errors) {
@@ -111,7 +111,7 @@ func StartServer() {
 		if err != nil {
 			return SendAndOutputError(err)
 		}
-		_, err = dInsertStatuses(newStatuses, account.Id)
+		_, err = dInsertStatuses(newStatuses, account.Id, host)
 		if err != nil {
 			fmt.Printf("db insert error: %v", err)
 		}
@@ -127,7 +127,7 @@ func StartServer() {
 		if err != nil {
 			return SendAndOutputError(err)
 		}
-		allFetched, err := dSelectAccountAllFetchedById(account.Id)
+		allFetched, err := dSelectAccountAllFetchedById(account.Id, host)
 		if err != nil {
 			return SendAndOutputError(err)
 		}
@@ -149,7 +149,7 @@ func StartServer() {
 				}
 				return c.Redirect(302, "/")
 			}
-			_, err = dInsertStatuses(newStatuses, account.Id)
+			_, err = dInsertStatuses(newStatuses, account.Id, host)
 			if err != nil {
 				fmt.Printf("db insert error: %v", err)
 			}
@@ -177,7 +177,7 @@ func StartServer() {
 		host := c.FormValue("host")
 		app, err := dSelectAppByHost(host)
 		if err != nil {
-			fmt.Printf("app data was not found in db. fetch it.")
+			fmt.Println("app data was not found in db. fetch it.")
 			app, err = hPostApp(host, os.Getenv("BASE_URL"))
 			if err != nil {
 				return SendAndOutputError(err)
@@ -236,7 +236,7 @@ func StartServer() {
 		if err != nil {
 			return SendAndOutputError(err)
 		}
-		_, err = dInsertAccountIfNotExists(account.Id, account.Acct)
+		_, err = dInsertAccountIfNotExists(account.Id, account.UserName, host)
 		if err != nil {
 			return SendAndOutputError(err)
 		}
@@ -254,11 +254,11 @@ func StartServer() {
 		c.SetCookie(hostCookie)
 		return c.Redirect(302, "/")
 	})
-	e.GET("/users/:acct", func(c echo.Context) error {
+	e.GET("/users/:host/:username", func(c echo.Context) error {
 		SendAndOutputError := HandlerError("GET", "/users/:acct", c)
-		acct := c.Param("acct")
-		fmt.Println(acct)
-		statuses, err := dSelectStatusesByAccount(acct)
+		username := c.Param("username")
+		host := c.Param("host")
+		statuses, err := dSelectStatusesByAccount(username, host)
 		if err != nil {
 			return SendAndOutputError(err)
 		}
