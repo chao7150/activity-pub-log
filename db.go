@@ -4,7 +4,16 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 )
+
+func ConvertCreatedAtToTokyo(statuses []Status) []Status {
+	location, _ := time.LoadLocation("Asia/Tokyo")
+	for i, v := range statuses {
+		statuses[i].CreatedAt = v.CreatedAt.In(location)
+	}
+	return statuses
+}
 
 func dSelectAppByHost(host string) (App, error) {
 	var app App
@@ -71,7 +80,7 @@ func dSelectOldestStatusIdByAccount(accoutId string) (string, error) {
 }
 
 func dSelectStatusesByAccountAndText(accountId string, includedText string) ([]Status, error) {
-	var statuses []Status
+	var res []Status
 
 	rows, err := db.Query("SELECT id, text, url, created_at FROM status WHERE accountId = ? AND text LIKE CONCAT('%', ?, '%') ORDER BY id DESC", accountId, includedText)
 	if err != nil {
@@ -83,11 +92,13 @@ func dSelectStatusesByAccountAndText(accountId string, includedText string) ([]S
 		if err := rows.Scan(&status.Id, &status.Text, &status.Url, &status.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan failed: %v", err)
 		}
-		statuses = append(statuses, status)
+		res = append(res, status)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("rows included error: %v", err)
 	}
+
+	statuses := ConvertCreatedAtToTokyo(res)
 	return statuses, nil
 }
 

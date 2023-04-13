@@ -104,10 +104,6 @@ func hGetAccountStatuses(host string, token string, id string, params string) ([
 	return statuses, nil
 }
 
-func hGetAccountStatusesNewerThan(host string, token string, id string, minId string) ([]Status, error) {
-	return hGetAccountStatuses(host, token, id, "min_id="+minId)
-}
-
 func hGetAccountStatusesOlderThan(host string, token string, id string, maxId string) ([]Status, error) {
 	return hGetAccountStatuses(host, token, id, "max_id="+maxId)
 }
