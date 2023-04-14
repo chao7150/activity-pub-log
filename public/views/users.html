@@ -1,0 +1,25 @@
+{{define "users"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/main.css">
+    <title>{{ .UserName }}</title>
+</head>
+<body>
+    <div class="account">
+        <h2><a class="account-displayname" href="https://{{.Host}}/@{{.UserName}}">{{.Host}}@{{.UserName}}</a></h2>
+    </div>
+    <ul>
+        {{range .Statuses}}
+            <li class="status">
+                <div class="status-createdat">{{.CreatedAt.Format "2006-01-02 15:04:05"}}</div>
+                <div>{{.Text}}</div>
+            </li>
+        {{end}}
+    </ul>
+</body>
+</html>
+{{end}}

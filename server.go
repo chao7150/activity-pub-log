@@ -263,7 +263,9 @@ func StartServer() {
 			return SendAndOutputError(err)
 		}
 
-		return c.String(http.StatusOK, fmt.Sprintf("%v", statuses))
+		props := UsersProps{Host: host, UserName: username, Statuses: statuses}
+
+		return c.Render(http.StatusOK, "users", props)
 	})
 
 	e.Logger.Fatal(e.Start(":1323"))

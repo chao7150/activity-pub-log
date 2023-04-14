@@ -20,3 +20,9 @@ type TopProps struct {
 	Statuses   []Status
 	AllFetched bool
 }
+
+type UsersProps struct {
+	Host     string
+	UserName string
+	Statuses []Status
+}

@@ -136,7 +136,7 @@ func dUpdateAccountAllFetched(accountId string) error {
 
 // get statuses from db by account acct joined with account table
 func dSelectStatusesByAccount(username string, host string) ([]Status, error) {
-	var statuses []Status
+	var res []Status
 
 	rows, err := db.Query("SELECT status.text, status.created_at FROM status INNER JOIN account ON status.accountId = account.id WHERE account.username = ? AND account.host = ? ORDER BY status.id DESC", username, host)
 	if err != nil {
@@ -148,10 +148,10 @@ func dSelectStatusesByAccount(username string, host string) ([]Status, error) {
 		if err := rows.Scan(&status.Text, &status.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan failed: %v", err)
 		}
-		statuses = append(statuses, status)
+		res = append(res, status)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("rows included error: %v", err)
 	}
-	return statuses, nil
+	return ConvertCreatedAtToTokyo(res), nil
 }
