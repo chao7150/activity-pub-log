@@ -1,6 +1,7 @@
 package activitypublog
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -15,9 +16,12 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
+	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dialect/mysqldialect"
 )
 
 var db *sql.DB
+var bundb *bun.DB
 
 type PostOauthTokenResponse struct {
 	AccessToken  string `json:"access_token"`
@@ -43,6 +47,8 @@ func StartServer() {
 		ParseTime: true,
 	}
 
+	ctx := context.Background()
+
 	db, err = sql.Open("mysql", cfg.FormatDSN())
 	if err != nil {
 		log.Fatal(err)
@@ -52,8 +58,10 @@ func StartServer() {
 		log.Fatal(pingErr)
 	}
 	fmt.Println("datebase connection established.")
+	bundb = bun.NewDB(db, mysqldialect.New())
+
 	var errors []error
-	if _, err = db.Exec("CREATE TABLE IF NOT EXISTS app (host VARCHAR(255), client_id VARCHAR(255), client_secret VARCHAR(255), PRIMARY KEY(`host`));"); err != nil {
+	if _, err = bundb.NewCreateTable().Model((*DApp)(nil)).IfNotExists().Exec(ctx); err != nil {
 		errors = append(errors, err)
 	}
 	if _, err = db.Exec("CREATE TABLE IF NOT EXISTS account (id VARCHAR(255), username VARCHAR(255), host VARCHAR(255), all_fetched boolean DEFAULT false, PRIMARY KEY(`id`, `host`));"); err != nil {
