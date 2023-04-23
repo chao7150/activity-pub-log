@@ -27,7 +27,7 @@ func ConvertCreatedAtToTokyo(statuses []Status) []Status {
 func dSelectAppByHost(host string) (App, error) {
 	var app App
 
-	row := db.QueryRow("SELECT * FROM apps where host = ?", host)
+	row := db.QueryRow("SELECT * FROM app where host = ?", host)
 	if err := row.Scan(&app.Host, &app.ClientId, &app.ClientSecret); err != nil {
 		if err == sql.ErrNoRows {
 			return app, fmt.Errorf("no app for hostname: %s", host)
@@ -38,7 +38,7 @@ func dSelectAppByHost(host string) (App, error) {
 }
 
 func dInsertApp(app App) error {
-	_, err := db.Exec("INSERT INTO apps (host, client_id, client_secret) VALUES (?, ?, ?)", app.Host, app.ClientId, app.ClientSecret)
+	_, err := db.Exec("INSERT INTO app (host, client_id, client_secret) VALUES (?, ?, ?)", app.Host, app.ClientId, app.ClientSecret)
 	if err != nil {
 		return fmt.Errorf("failed to create app: %v", err)
 	}
