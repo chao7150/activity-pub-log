@@ -11,9 +11,17 @@ import (
 
 type DApp struct {
 	bun.BaseModel `bun:"table:app"`
-	Host string `bun:",pk"`
-	ClientId string
-	ClientSecret string
+	Host          string `bun:",pk"`
+	ClientId      string
+	ClientSecret  string
+}
+
+type DAccount struct {
+	bun.BaseModel `bun:"table:accounts"`
+	Id            string `bun:",pk"`
+	Username      string
+	Host          string `bun:",pk"`
+	AllFetched    bool   `bun:",default:true"`
 }
 
 func ConvertCreatedAtToTokyo(statuses []Status) []Status {
@@ -49,7 +57,7 @@ func dInsertStatuses(statuses []Status, accountId string, host string) (int64, e
 	if len(statuses) == 0 {
 		return 0, nil
 	}
-	baseQuery := "INSERT INTO status (id, host, accountId, text, url, created_at) VALUES "
+	baseQuery := "INSERT INTO status (id, host, account_id, text, url, created_at) VALUES "
 	var dataQueries []string
 	vals := []interface{}{}
 	for _, v := range statuses {
@@ -81,17 +89,17 @@ func execSelectSingleStatusId(query string, accountId string) (string, error) {
 }
 
 func dSelectNewestStatusIdByAccount(accoutId string) (string, error) {
-	return execSelectSingleStatusId("SELECT id FROM status WHERE accountId = ? ORDER BY id DESC LIMIT 1", accoutId)
+	return execSelectSingleStatusId("SELECT id FROM status WHERE account_id = ? ORDER BY id DESC LIMIT 1", accoutId)
 }
 
 func dSelectOldestStatusIdByAccount(accoutId string) (string, error) {
-	return execSelectSingleStatusId("SELECT id FROM status WHERE accountId = ? ORDER BY id ASC LIMIT 1", accoutId)
+	return execSelectSingleStatusId("SELECT id FROM status WHERE account_id = ? ORDER BY id ASC LIMIT 1", accoutId)
 }
 
 func dSelectStatusesByAccountAndText(accountId string, includedText string) ([]Status, error) {
 	var res []Status
 
-	rows, err := db.Query("SELECT id, text, url, created_at FROM status WHERE accountId = ? AND text LIKE CONCAT('%', ?, '%') ORDER BY id DESC", accountId, includedText)
+	rows, err := db.Query("SELECT id, text, url, created_at FROM status WHERE account_id = ? AND text LIKE CONCAT('%', ?, '%') ORDER BY id DESC", accountId, includedText)
 	if err != nil {
 		return nil, fmt.Errorf("query failed: %v", err)
 	}
@@ -147,7 +155,7 @@ func dUpdateAccountAllFetched(accountId string) error {
 func dSelectStatusesByAccount(username string, host string) ([]Status, error) {
 	var res []Status
 
-	rows, err := db.Query("SELECT status.text, status.created_at FROM status INNER JOIN account ON status.accountId = account.id WHERE account.username = ? AND account.host = ? ORDER BY status.id DESC", username, host)
+	rows, err := db.Query("SELECT status.text, status.created_at FROM status INNER JOIN account ON status.account_id = account.id WHERE account.username = ? AND account.host = ? ORDER BY status.id DESC", username, host)
 	if err != nil {
 		return nil, fmt.Errorf("query failed: %v", err)
 	}
