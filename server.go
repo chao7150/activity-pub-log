@@ -22,6 +22,7 @@ import (
 
 var db *sql.DB
 var bundb *bun.DB
+var ctx = context.Background()
 
 type PostOauthTokenResponse struct {
 	AccessToken  string `json:"access_token"`
@@ -47,8 +48,6 @@ func StartServer() {
 		ParseTime: true,
 	}
 
-	ctx := context.Background()
-
 	db, err = sql.Open("mysql", cfg.FormatDSN())
 	if err != nil {
 		log.Fatal(err)
@@ -61,7 +60,7 @@ func StartServer() {
 	bundb = bun.NewDB(db, mysqldialect.New())
 
 	var errors []error
-	if _, err = bundb.NewCreateTable().Model((*DApp)(nil)).IfNotExists().Exec(ctx); err != nil {
+	if _, err = bundb.NewCreateTable().Model((*App)(nil)).IfNotExists().Exec(ctx); err != nil {
 		errors = append(errors, err)
 	}
 	if _, err = bundb.NewCreateTable().Model((*DAccount)(nil)).IfNotExists().Exec(ctx); err != nil {

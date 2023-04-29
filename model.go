@@ -1,11 +1,16 @@
 package activitypublog
 
-import "time"
+import (
+	"time"
+
+	"github.com/uptrace/bun"
+)
 
 type App struct {
-	Host         string `json:"host"`
-	ClientId     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
+	bun.BaseModel `bun:"table:app"`
+	Host          string `json:"host" bun:",pk"`
+	ClientId      string `json:"client_id"`
+	ClientSecret  string `json:"client_secret"`
 }
 
 type Account struct {

@@ -9,13 +9,6 @@ import (
 	"github.com/uptrace/bun"
 )
 
-type DApp struct {
-	bun.BaseModel `bun:"table:app"`
-	Host          string `bun:",pk"`
-	ClientId      string
-	ClientSecret  string
-}
-
 type DAccount struct {
 	bun.BaseModel `bun:"table:account"`
 	Id            string `bun:",pk"`
@@ -44,9 +37,8 @@ func ConvertCreatedAtToTokyo(statuses []Status) []Status {
 
 func dSelectAppByHost(host string) (App, error) {
 	var app App
-
-	row := db.QueryRow("SELECT * FROM app where host = ?", host)
-	if err := row.Scan(&app.Host, &app.ClientId, &app.ClientSecret); err != nil {
+	err := bundb.NewSelect().Model(&app).Where("host = ?", host).Scan(ctx)
+	if err != nil {
 		if err == sql.ErrNoRows {
 			return app, fmt.Errorf("no app for hostname: %s", host)
 		}
@@ -56,7 +48,7 @@ func dSelectAppByHost(host string) (App, error) {
 }
 
 func dInsertApp(app App) error {
-	_, err := db.Exec("INSERT INTO app (host, client_id, client_secret) VALUES (?, ?, ?)", app.Host, app.ClientId, app.ClientSecret)
+	_, err := bundb.NewInsert().Model(&app).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create app: %v", err)
 	}
