@@ -17,11 +17,21 @@ type DApp struct {
 }
 
 type DAccount struct {
-	bun.BaseModel `bun:"table:accounts"`
+	bun.BaseModel `bun:"table:account"`
 	Id            string `bun:",pk"`
 	Username      string
 	Host          string `bun:",pk"`
 	AllFetched    bool   `bun:",default:true"`
+}
+
+type DStatus struct {
+	bun.BaseModel `bun:"table:status"`
+	Id            string `bun:",pk"`
+	Host          string `bun:",pk"`
+	AccountId     string
+	Text          string `bun:"type:VARCHAR(10000)"`
+	Url           string
+	CreatedAt     time.Time
 }
 
 func ConvertCreatedAtToTokyo(statuses []Status) []Status {
