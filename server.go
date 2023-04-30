@@ -66,7 +66,7 @@ func StartServer() {
 	if _, err = bundb.NewCreateTable().Model((*Account)(nil)).IfNotExists().Exec(ctx); err != nil {
 		errors = append(errors, err)
 	}
-	if _, err = bundb.NewCreateTable().Model((*DStatus)(nil)).ForeignKey("(`account_id`, `host`) REFERENCES account (`id`, `host`) ON DELETE CASCADE").IfNotExists().Exec(ctx); err != nil {
+	if _, err = bundb.NewCreateTable().Model((*Status)(nil)).ForeignKey("(`account_id`, `host`) REFERENCES account (`id`, `host`) ON DELETE CASCADE").IfNotExists().Exec(ctx); err != nil {
 		errors = append(errors, err)
 	}
 	if 0 < len(errors) {

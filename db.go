@@ -3,21 +3,8 @@ package activitypublog
 import (
 	"database/sql"
 	"fmt"
-	"strings"
 	"time"
-
-	"github.com/uptrace/bun"
 )
-
-type DStatus struct {
-	bun.BaseModel `bun:"table:status"`
-	Id            string `bun:",pk"`
-	Host          string `bun:",pk"`
-	AccountId     string
-	Text          string `bun:"type:VARCHAR(10000)"`
-	Url           string
-	CreatedAt     time.Time
-}
 
 func ConvertCreatedAtToTokyo(statuses []Status) []Status {
 	location, _ := time.LoadLocation("Asia/Tokyo")
@@ -51,15 +38,8 @@ func dInsertStatuses(statuses []Status, accountId string, host string) (int64, e
 	if len(statuses) == 0 {
 		return 0, nil
 	}
-	baseQuery := "INSERT INTO status (id, host, account_id, text, url, created_at) VALUES "
-	var dataQueries []string
-	vals := []interface{}{}
-	for _, v := range statuses {
-		dataQueries = append(dataQueries, "(?, ?, ?, ?, ?, ?)")
-		vals = append(vals, v.Id, host, accountId, v.Text, v.Url, v.CreatedAt)
-	}
-	q := baseQuery + strings.Join(dataQueries, ",")
-	res, err := db.Exec(q, vals...)
+	fmt.Printf("%+v", statuses[0])
+	res, err := bundb.NewInsert().Model(&statuses).Exec(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to insert statuses: %v", err)
 	}
@@ -145,24 +125,19 @@ func dUpdateAccountAllFetched(accountId string) error {
 	return nil
 }
 
-// get statuses from db by account acct joined with account table
 func dSelectStatusesByAccount(username string, host string) ([]Status, error) {
-	var res []Status
+	var statuses []Status
 
-	rows, err := db.Query("SELECT status.text, status.created_at FROM status INNER JOIN account ON status.account_id = account.id WHERE account.username = ? AND account.host = ? ORDER BY status.id DESC", username, host)
+	err := bundb.NewSelect().
+		Model(&statuses).
+		Column("status.text", "status.created_at").
+		Join("INNER JOIN account").
+		JoinOn("status.account_id = account.id").
+		Where("account.user_name = ? AND account.host = ?", username, host).
+		Order("status.id DESC").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("query failed: %v", err)
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var status Status
-		if err := rows.Scan(&status.Text, &status.CreatedAt); err != nil {
-			return nil, fmt.Errorf("scan failed: %v", err)
-		}
-		res = append(res, status)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows included error: %v", err)
-	}
-	return ConvertCreatedAtToTokyo(res), nil
+	return ConvertCreatedAtToTokyo(statuses), nil
 }

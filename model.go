@@ -31,10 +31,13 @@ type Tag struct {
 }
 
 type Status struct {
-	Id        string
-	Account   Account
-	Text      string
-	Url       string
-	CreatedAt time.Time
-	Tags      []Tag
+	bun.BaseModel `bun:"table:status"`
+	Id            string `bun:",pk"`
+	Host          string `bun:",pk"`
+	AccountId     string
+	Account       Account `bun:"-"`
+	Text          string  `bun:"type:VARCHAR(10000)"`
+	Url           string
+	CreatedAt     time.Time
+	Tags          []Tag `bun:"-"`
 }

@@ -98,6 +98,8 @@ func hGetAccountStatuses(host string, token string, id string, params string) ([
 			Url:       v.Url,
 			CreatedAt: ca.In(location),
 			Tags:      v.Tags,
+			Host:      host,
+			AccountId: id,
 		}
 		statuses = append(statuses, s)
 	}
