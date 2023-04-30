@@ -9,14 +9,6 @@ import (
 	"github.com/uptrace/bun"
 )
 
-type DAccount struct {
-	bun.BaseModel `bun:"table:account"`
-	Id            string `bun:",pk"`
-	Username      string
-	Host          string `bun:",pk"`
-	AllFetched    bool   `bun:",default:true"`
-}
-
 type DStatus struct {
 	bun.BaseModel `bun:"table:status"`
 	Id            string `bun:",pk"`
@@ -122,7 +114,7 @@ func dSelectStatusesByAccountAndText(accountId string, includedText string) ([]S
 }
 
 func dInsertAccountIfNotExists(id string, username string, host string) (int64, error) {
-	res, err := db.Exec("INSERT INTO account SELECT * FROM (SELECT ? as c1, ? as c2, ? as c3, false) AS tmp WHERE NOT EXISTS (SELECT id FROM account WHERE id = ?) LIMIT 1", id, username, host, id)
+	res, err := db.Exec("INSERT INTO account SELECT * FROM (SELECT ? as c1, ? as c2, ? as c3, false) AS tmp WHERE NOT EXISTS (SELECT id FROM account WHERE id = ?) LIMIT 1", id, host, username, id)
 	if err != nil {
 		return 0, fmt.Errorf("failed to insert account: %v", err)
 	}
@@ -134,19 +126,19 @@ func dInsertAccountIfNotExists(id string, username string, host string) (int64, 
 }
 
 func dSelectAccountAllFetchedById(accountId string, host string) (bool, error) {
-	var allFetched bool
-	row := db.QueryRow("SELECT all_fetched FROM account WHERE id = ? AND host = ?", accountId, host)
-	if err := row.Scan(&allFetched); err != nil {
+	var account Account
+	err := bundb.NewSelect().Model(&account).Column("all_fetched").Where("id = ? AND host = ?", accountId, host).Scan(ctx)
+	if err != nil {
 		if err == sql.ErrNoRows {
 			return false, nil
 		}
 		return false, fmt.Errorf("dSelectAccountAllFetchedById: %v", err)
 	}
-	return allFetched, nil
+	return account.AllFetched, nil
 }
 
 func dUpdateAccountAllFetched(accountId string) error {
-	_, err := db.Exec("UPDATE account set all_fetched = true where id = ?", accountId)
+	_, err := bundb.NewUpdate().Model(&Account{AllFetched: true}).Column("all_fetched").Where("id = ?", accountId).Exec(ctx)
 	if err != nil {
 		return err
 	}

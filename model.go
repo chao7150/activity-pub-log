@@ -14,12 +14,15 @@ type App struct {
 }
 
 type Account struct {
-	Id          string
-	Acct        string
-	Avatar      string
-	DisplayName string `json:"display_name"`
-	Url         string
-	UserName    string
+	bun.BaseModel `bun:"table:account"`
+	Id            string `bun:",pk"`
+	Host          string `bun:",pk"`
+	Acct          string `bun:"-"`
+	Avatar        string `bun:"-"`
+	DisplayName   string `json:"display_name" bun:"-"`
+	Url           string `bun:"-"`
+	UserName      string
+	AllFetched    bool `bun:",default:true"`
 }
 
 type Tag struct {
