@@ -14,6 +14,13 @@ func ConvertCreatedAtToTokyo(statuses []Status) []Status {
 	return statuses
 }
 
+func ConvertCreatedAtToUTC(statuses []Status) []Status {
+	for i, v := range statuses {
+		statuses[i].CreatedAt = v.CreatedAt.UTC()
+	}
+	return statuses
+}
+
 func dSelectAppByHost(host string) (App, error) {
 	var app App
 	err := bundb.NewSelect().Model(&app).Where("host = ?", host).Scan(ctx)
@@ -38,7 +45,7 @@ func dInsertStatuses(statuses []Status, accountId string, host string) (int64, e
 	if len(statuses) == 0 {
 		return 0, nil
 	}
-	fmt.Printf("%+v", statuses[0])
+	statuses = ConvertCreatedAtToUTC(statuses)
 	res, err := bundb.NewInsert().Model(&statuses).Exec(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to insert statuses: %v", err)
