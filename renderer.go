@@ -19,6 +19,7 @@ type TopProps struct {
 	Account    Account
 	Statuses   []Status
 	AllFetched bool
+	Public     bool
 }
 
 type UsersProps struct {

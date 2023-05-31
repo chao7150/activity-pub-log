@@ -86,7 +86,11 @@ func StartServer() {
 		if err != nil {
 			return err
 		}
-		account, nil := hGetVerifyCredentials(host, token)
+		account, err := hGetVerifyCredentials(host, token)
+		if err != nil {
+			return SendAndOutputError(err)
+		}
+		account, err = dSelectAccount(account.Id, host)
 		if err != nil {
 			return SendAndOutputError(err)
 		}
@@ -95,8 +99,7 @@ func StartServer() {
 		if err != nil {
 			return SendAndOutputError(err)
 		}
-		allFetched := c.QueryParam("allFetched") == "true"
-		props := TopProps{Account: account, Statuses: allStatuses, AllFetched: allFetched}
+		props := TopProps{Account: account, Statuses: allStatuses, AllFetched: account.AllFetched, Public: account.Public}
 
 		return c.Render(http.StatusOK, "top", props)
 	})
@@ -262,9 +265,16 @@ func StartServer() {
 		return c.Redirect(302, "/")
 	})
 	e.GET("/users/:host/:username", func(c echo.Context) error {
-		SendAndOutputError := HandlerError("GET", "/users/:acct", c)
+		SendAndOutputError := HandlerError("GET", "/users/:host/:username", c)
 		username := c.Param("username")
 		host := c.Param("host")
+		account, err := dSelectAccountByUserName(username, host)
+		if err != nil {
+			return SendAndOutputError(err)
+		}
+		if !account.Public {
+			return c.String(http.StatusNotFound, "not found")
+		}
 		statuses, err := dSelectStatusesByAccount(username, host)
 		if err != nil {
 			return SendAndOutputError(err)
@@ -273,6 +283,23 @@ func StartServer() {
 		props := UsersProps{Host: host, UserName: username, Statuses: statuses}
 
 		return c.Render(http.StatusOK, "users", props)
+	})
+	e.POST("/status/public", func(c echo.Context) error {
+		SendAndOutputError := HandlerError("POST", "/status/public", c)
+		token, host, err := RequireLoggedIn(c)
+		if err != nil {
+			return err
+		}
+		public := c.FormValue("public") == "true"
+		account, nil := hGetVerifyCredentials(host, token)
+		if err != nil {
+			return SendAndOutputError(err)
+		}
+		err = dUpdateAccountPublic(account.Id, host, public)
+		if err != nil {
+			return SendAndOutputError(err)
+		}
+		return c.Redirect(302, "/")
 	})
 
 	e.Logger.Fatal(e.Start(":1323"))

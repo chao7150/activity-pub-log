@@ -101,7 +101,7 @@ func dSelectStatusesByAccountAndText(accountId string, includedText string) ([]S
 }
 
 func dInsertAccountIfNotExists(id string, username string, host string) (int64, error) {
-	res, err := db.Exec("INSERT INTO account SELECT * FROM (SELECT ? as c1, ? as c2, ? as c3, false) AS tmp WHERE NOT EXISTS (SELECT id FROM account WHERE id = ?) LIMIT 1", id, host, username, id)
+	res, err := db.Exec("INSERT INTO account SELECT * FROM (SELECT ? as c1, ? as c2, ? as c3, ? as c4, false) AS tmp WHERE NOT EXISTS (SELECT id FROM account WHERE id = ?) LIMIT 1", id, host, username, false, id)
 	if err != nil {
 		return 0, fmt.Errorf("failed to insert account: %v", err)
 	}
@@ -130,6 +130,32 @@ func dUpdateAccountAllFetched(accountId string) error {
 		return err
 	}
 	return nil
+}
+
+func dUpdateAccountPublic(accountId string, host string, public bool) error {
+	_, err := bundb.NewUpdate().Model(&Account{Public: public}).Column("public").Where("id = ?", accountId).Where("host = ?", host).Exec(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func dSelectAccount(accountId string, host string) (Account, error) {
+	var account Account
+	err := bundb.NewSelect().Model(&account).Where("id = ? AND host = ?", accountId, host).Scan(ctx)
+	if err != nil {
+		return account, fmt.Errorf("dSelectAccount: %v", err)
+	}
+	return account, nil
+}
+
+func dSelectAccountByUserName(username string, host string) (Account, error) {
+	var account Account
+	err := bundb.NewSelect().Model(&account).Where("user_name = ? AND host = ?", username, host).Scan(ctx)
+	if err != nil {
+		return account, fmt.Errorf("dSelectAccountByUserName: %v", err)
+	}
+	return account, nil
 }
 
 func dSelectStatusesByAccount(username string, host string) ([]Status, error) {

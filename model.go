@@ -23,6 +23,7 @@ type Account struct {
 	Url           string `bun:"-"`
 	UserName      string
 	AllFetched    bool `bun:",default:true"`
+	Public        bool `bun:",default:false"`
 }
 
 type Tag struct {
