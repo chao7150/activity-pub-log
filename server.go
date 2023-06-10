@@ -99,7 +99,8 @@ func StartServer() {
 		if err != nil {
 			return SendAndOutputError(err)
 		}
-		props := TopProps{Account: account, Statuses: allStatuses, AllFetched: account.AllFetched, Public: account.Public}
+		noMoreNewerStatuses := c.QueryParam("noMoreNewerStatuses") == "true"
+		props := TopProps{Account: account, Statuses: allStatuses, AllFetched: account.AllFetched, NoMoreNewerStatuses: noMoreNewerStatuses, Public: account.Public}
 
 		return c.Render(http.StatusOK, "top", props)
 	})
@@ -120,6 +121,9 @@ func StartServer() {
 		newStatuses, nil := hGetAccountStatusesAll(host, token, account.Id, newestStatusId, "")
 		if err != nil {
 			return SendAndOutputError(err)
+		}
+		if len(newStatuses) == 0 {
+			return c.Redirect(302, "/?noMoreNewerStatuses=true")
 		}
 		_, err = dInsertStatuses(newStatuses, account.Id, host)
 		if err != nil {
