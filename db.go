@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"time"
+
+	"github.com/uptrace/bun"
 )
 
 func ConvertCreatedAtToTokyo(statuses []Status) []Status {
@@ -101,7 +103,7 @@ func dSelectStatusesByAccountAndText(accountId string, includedText string) ([]S
 }
 
 func dInsertAccountIfNotExists(id string, username string, host string) (int64, error) {
-	res, err := db.Exec("INSERT INTO account SELECT * FROM (SELECT ? as c1, ? as c2, ? as c3, ? as c4, false) AS tmp WHERE NOT EXISTS (SELECT id FROM account WHERE id = ?) LIMIT 1", id, host, username, false, id)
+	res, err := db.Exec("INSERT INTO account SELECT * FROM (SELECT ? as c1, ? as c2, ? as c3, ? as c4, ? as c5, ? as c6, ? as c7, false) AS tmp WHERE NOT EXISTS (SELECT id FROM account WHERE id = ?) LIMIT 1", id, host, username, false, false, false, false, id)
 	if err != nil {
 		return 0, fmt.Errorf("failed to insert account: %v", err)
 	}
@@ -158,15 +160,41 @@ func dSelectAccountByUserName(username string, host string) (Account, error) {
 	return account, nil
 }
 
-func dSelectStatusesByAccount(username string, host string) ([]Status, error) {
+func dUpdateAccountVisibility(accountId string, host string, showUnlisted bool, showPrivate bool, showDirect bool) error {
+	_, err := bundb.NewUpdate().Model(&Account{ShowUnlisted: showUnlisted, ShowPrivate: showPrivate, ShowDirect: showDirect}).Column("show_unlisted", "show_private", "show_direct").Where("id = ?", accountId).Where("host = ?", host).Exec(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func dSelectStatusesByAccountWithRestriction(username string, host string) ([]Status, error) {
+	var account Account
+	err := bundb.NewSelect().Model(&account).Column("show_unlisted", "show_private", "show_direct").Where("user_name = ? AND host = ?", username, host).Scan(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("visibitily query failed: %v", err)
+	}
+
+	var visibilities []string = []string{"public"}
+	if account.ShowUnlisted {
+		visibilities = append(visibilities, "unlisted")
+	}
+	if account.ShowPrivate {
+		visibilities = append(visibilities, "private")
+	}
+	if account.ShowDirect {
+		visibilities = append(visibilities, "direct")
+	}
+
 	var statuses []Status
 
-	err := bundb.NewSelect().
+	err = bundb.NewSelect().
 		Model(&statuses).
 		Column("status.text", "status.created_at").
 		Join("INNER JOIN account").
 		JoinOn("status.account_id = account.id").
 		Where("account.user_name = ? AND account.host = ?", username, host).
+		Where("visibility in (?)", bun.In(visibilities)).
 		Order("status.id DESC").
 		Scan(ctx)
 	if err != nil {

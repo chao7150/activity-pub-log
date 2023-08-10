@@ -54,12 +54,13 @@ func hGetVerifyCredentials(host string, token string) (Account, error) {
 }
 
 type hGetAccountStatusesResponse []struct {
-	Id        string
-	Account   Account
-	Text      string
-	Url       string
-	CreatedAt string `json:"created_at"`
-	Tags      []Tag
+	Id         string
+	Account    Account
+	Text       string
+	Url        string
+	CreatedAt  string `json:"created_at"`
+	Tags       []Tag
+	Visibility string
 }
 
 func hGetAccountStatuses(host string, token string, id string, params string) ([]Status, error) {
@@ -92,14 +93,15 @@ func hGetAccountStatuses(host string, token string, id string, params string) ([
 			continue
 		}
 		s := Status{
-			Id:        v.Id,
-			Account:   v.Account,
-			Text:      v.Text,
-			Url:       v.Url,
-			CreatedAt: ca.In(location),
-			Tags:      v.Tags,
-			Host:      host,
-			AccountId: id,
+			Id:         v.Id,
+			Account:    v.Account,
+			Text:       v.Text,
+			Url:        v.Url,
+			CreatedAt:  ca.In(location),
+			Tags:       v.Tags,
+			Host:       host,
+			AccountId:  id,
+			Visibility: v.Visibility,
 		}
 		statuses = append(statuses, s)
 	}

@@ -1,6 +1,7 @@
 {{define "top"}}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -8,6 +9,7 @@
     <link rel="stylesheet" href="static/main.css">
     <title>Document</title>
 </head>
+
 <body>
     <div class="account">
         <img class="account-icon" src="{{.Account.Avatar}}" width="100px">
@@ -19,10 +21,12 @@
         <button type="submit">検索する</button>
     </form>
 
-    
+
     {{if .Public}}
     <div>あなたの投稿は他人に公開されています（activitypubアカウントが非公開でも公開されます）</div>
-    <div>URL: <a href="/users/{{.Account.Host}}/{{.Account.UserName}}">/users/{{.Account.Host}}/{{.Account.UserName}}</a></div>
+    <div>URL: <a
+            href="/users/{{.Account.Host}}/{{.Account.UserName}}">/users/{{.Account.Host}}/{{.Account.UserName}}</a>
+    </div>
     <form action="/status/public" method="post">
         <button type="submit" name="public" value="false">非公開状態にする</button>
     </form>
@@ -32,7 +36,18 @@
         <button type="submit" name="public" value="true">公開状態にする</button>
     </form>
     {{end}}
-    
+
+    <form action="/account/visibility" method="post">
+        <ul>
+            <li><label><input type="checkbox" name="unlisted" {{if .Account.ShowUnlisted}}checked{{end}}>未収載</label>
+            </li>
+            <li><label><input type="checkbox" name="private" {{if .Account.ShowPrivate}}checked{{end}}>フォロワー限定</label>
+            </li>
+            <li><label><input type="checkbox" name="direct" {{if .Account.ShowDirect}}checked{{end}}>ダイレクト</label></li>
+        </ul>
+        <button type="submit">設定を変更する</button>
+    </form>
+
 
     {{if .NoMoreNewerStatuses}}
     <div>
@@ -40,21 +55,30 @@
     </div>
     {{end}}
     <ul class="load-button-list">
-        {{if not .AllFetched}}<li class="load-button"><form action="/status/cursor/last" method="post"><button>より古い投稿を読み込む</button></form></li>{{end}}
-            <li class="load-button"><form action="/status/cursor/head" method="post"><button>より新しい投稿を読み込む</button></form></li>
+        {{if not .AllFetched}}<li class="load-button">
+            <form action="/status/cursor/last" method="post"><button>より古い投稿を読み込む</button></form>
+        </li>{{end}}
+        <li class="load-button">
+            <form action="/status/cursor/head" method="post"><button>より新しい投稿を読み込む</button></form>
+        </li>
     </ul>
     <ul>
         {{range .Statuses}}
-            <li class="status">
-                <div class="status-createdat">{{.CreatedAt.Format "2006-01-02 15:04:05"}}</div>
-                <div>{{.Text}}</div>
-            </li>
+        <li class="status">
+            <div class="status-createdat">{{.CreatedAt.Format "2006-01-02 15:04:05"}}</div>
+            <div>{{.Text}}</div>
+        </li>
         {{end}}
     </ul>
     <ul class="load-button-list">
-        {{if not .AllFetched}}<li class="load-button"><form action="/status/cursor/last" method="post"><button>より古い投稿を読み込む</button></form></li>{{end}}
-        <li class="load-button"><form action="/status/cursor/head" method="post"><button>より新しい投稿を読み込む</button></form></li>
+        {{if not .AllFetched}}<li class="load-button">
+            <form action="/status/cursor/last" method="post"><button>より古い投稿を読み込む</button></form>
+        </li>{{end}}
+        <li class="load-button">
+            <form action="/status/cursor/head" method="post"><button>より新しい投稿を読み込む</button></form>
+        </li>
     </ul>
 </body>
+
 </html>
 {{end}}

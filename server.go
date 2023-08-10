@@ -66,7 +66,7 @@ func StartServer() {
 	if _, err = bundb.NewCreateTable().Model((*Account)(nil)).IfNotExists().Exec(ctx); err != nil {
 		errors = append(errors, err)
 	}
-	if _, err = bundb.NewCreateTable().Model((*Status)(nil)).ForeignKey("(`account_id`, `host`) REFERENCES account (`id`, `host`) ON DELETE CASCADE").IfNotExists().Exec(ctx); err != nil {
+	if _, err = bundb.NewCreateTable().Model((*Status)(nil)).ForeignKey("(`account_id`, `host`) REFERENCES account (`id`, `host`) ON DELETE CASCADE").ForeignKey("(`visibility`) REFERENCES visibility (`visibility`) ON DELETE CASCADE ON UPDATE CASCADE").IfNotExists().Exec(ctx); err != nil {
 		errors = append(errors, err)
 	}
 	if 0 < len(errors) {
@@ -279,7 +279,7 @@ func StartServer() {
 		if !account.Public {
 			return c.String(http.StatusNotFound, "not found")
 		}
-		statuses, err := dSelectStatusesByAccount(username, host)
+		statuses, err := dSelectStatusesByAccountWithRestriction(username, host)
 		if err != nil {
 			return SendAndOutputError(err)
 		}
@@ -300,6 +300,25 @@ func StartServer() {
 			return SendAndOutputError(err)
 		}
 		err = dUpdateAccountPublic(account.Id, host, public)
+		if err != nil {
+			return SendAndOutputError(err)
+		}
+		return c.Redirect(302, "/")
+	})
+	e.POST("/account/visibility", func(c echo.Context) error {
+		SendAndOutputError := HandlerError("POST", "/account/visibility", c)
+		token, host, err := RequireLoggedIn(c)
+		if err != nil {
+			return err
+		}
+		showUnlisted := c.FormValue("unlisted") == "on"
+		showPrivate := c.FormValue("private") == "on"
+		showDirect := c.FormValue("direct") == "on"
+		account, nil := hGetVerifyCredentials(host, token)
+		if err != nil {
+			return SendAndOutputError(err)
+		}
+		err = dUpdateAccountVisibility(account.Id, host, showUnlisted, showPrivate, showDirect)
 		if err != nil {
 			return SendAndOutputError(err)
 		}

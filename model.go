@@ -24,6 +24,9 @@ type Account struct {
 	UserName      string
 	AllFetched    bool `bun:",default:true"`
 	Public        bool `bun:",default:false"`
+	ShowUnlisted  bool
+	ShowPrivate   bool
+	ShowDirect    bool
 }
 
 type Tag struct {
@@ -41,4 +44,5 @@ type Status struct {
 	Url           string
 	CreatedAt     time.Time
 	Tags          []Tag `bun:"-"`
+	Visibility    string
 }
