@@ -16,6 +16,7 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/mysqldialect"
 )
@@ -78,6 +79,7 @@ func StartServer() {
 	}
 
 	e := echo.New()
+	e.Use(middleware.Gzip())
 	e.Renderer = t
 	e.Static("/static", "assets")
 	e.GET("/", func(c echo.Context) error {
